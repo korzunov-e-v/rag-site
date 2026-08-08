@@ -1,0 +1,27 @@
+services:
+    app:
+        build: .
+        ports:
+            - "8000:8000"
+        command: python3 backend/app/main.py
+        depends_on:
+            db:
+                condition: service_healthy
+    db:
+        image: postgres
+        environment:
+            POSTGRES_DB: rag
+            POSTGRES_USER: postgres
+            POSTGRES_PASSWORD: postgres
+        ports:
+            - "5432:5432"
+        volumes:
+          - postgres_data:/var/lib/postgresql
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U postgres -d rag"]
+            interval: 5s
+            timeout: 5s
+            retries: 5
+
+volumes:
+    postgres_data:

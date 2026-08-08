@@ -1,0 +1,11 @@
+[project]
+name = "rag-site"
+version = "0.1.0"
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi>=0.141.1",
+    "psycopg2-binary>=2.9.12",
+    "pydantic-settings>=2.15.0",
+    "sqlalchemy>=2.0.51",
+    "uvicorn>=0.52.1",
+]
