@@ -1,15 +1,30 @@
-from sqlalchemy import String
-from sqlalchemy.orm import Mapped
-from sqlalchemy.orm import mapped_column
+from datetime import datetime
+
+from sqlalchemy import DateTime, String, func
+from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import Enum as SQLEnum
 
 from backend.app.db.base import Base
+from backend.app.db.enums import DocumentStatus
 
 
 class Document(Base):
     __tablename__ = "documents"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    filename: Mapped[str] = mapped_column(String())
+    filename: Mapped[str] = mapped_column(String(255))
+    content_type: Mapped[str] = mapped_column(String(100))
+    size: Mapped[int] = mapped_column()
+    storage_path: Mapped[str] = mapped_column(String(500))
+    status: Mapped[DocumentStatus] = mapped_column(
+        SQLEnum(DocumentStatus),
+        default=DocumentStatus.UPLOADED,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+    )
+    description: Mapped[str | None] = mapped_column(String(500))
 
     def __repr__(self) -> str:
         return f"Document(id={repr(self.id)}, filename={repr(self.filename)})"
