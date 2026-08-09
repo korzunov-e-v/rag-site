@@ -8,14 +8,9 @@ from backend.app.api.v1.router import v1_router
 from backend.app.api.v1.schemas import DocumentResponse
 from backend.app.db.connect import get_db
 from backend.app.db.models.document import Document
-from backend.app.llm.openrouter import client
 
-from backend.app.services.embeddings import create_embedding
 from backend.app.services.process_doc import process_doc
-from backend.app.services.retrieval import search_chunks
 from backend.app.services.save import save_document
-from backend.app.settings import settings
-
 
 
 @v1_router.post("/documents", response_model=DocumentResponse)
@@ -70,51 +65,3 @@ def delete_document(
     return None
 
 
-@v1_router.post("/search")
-def search(
-    query: str,
-    db: Annotated[Session, Depends(get_db)],
-):
-    query_embedding = create_embedding(query)
-
-    return [
-        {
-            "id": chunk.id,
-            "text": chunk.text,
-            "distance": distance,
-        }
-        for chunk, distance in search_chunks(
-            query_embedding=query_embedding,
-            db=db,
-        )
-    ]
-
-
-@v1_router.post("/ask")
-def ask(
-    query: str,
-    db: Annotated[Session, Depends(get_db)],
-):
-    query_embedding = create_embedding(query)
-    chunks = search_chunks(
-        query_embedding=query_embedding,
-        db=db,
-        limit=5,
-    )
-    if not chunks:
-        return "В загруженных документах не найдено информации по этому вопросу."
-    resp = client.chat.completions.create(
-        messages=[
-            {
-                "role": "system",
-                "content": settings.system_prompt.format(
-                    chunks=[chunk.text for chunk, _ in chunks],
-                    query=query
-                )
-            },
-            {"role": "user", "content": query}
-        ],
-        model=settings.openrouter_llm_model,
-        stream=False,
-    )
-    return resp.choices[0].message.content

@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     openrouter_api_key: str
     openrouter_embedding_model_dimensions: int = 1536
 
-    max_distance: float = 0.5
+    max_distance: float = 0.7
 
     system_prompt: str = """
     Ты отвечаешь на вопрос пользователя, используя только
