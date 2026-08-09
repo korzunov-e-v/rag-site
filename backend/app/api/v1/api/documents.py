@@ -1,6 +1,4 @@
 from typing import Annotated
-from pathlib import Path
-import shutil
 
 from fastapi import Depends, HTTPException, status, UploadFile
 from sqlalchemy import select
@@ -9,16 +7,13 @@ from sqlalchemy.orm import Session
 from backend.app.api.v1.router import v1_router
 from backend.app.api.v1.schemas import DocumentResponse
 from backend.app.db.connect import get_db
-from backend.app.db.models import DocumentChunk
 from backend.app.db.models.document import Document
 from backend.app.llm.openrouter import client
-from backend.app.services.chunking import split_text
 
-from backend.app.services.embeddings import create_embedding, create_embeddings
-from backend.app.services.extraction import get_text
+from backend.app.services.embeddings import create_embedding
 from backend.app.services.process_doc import process_doc
 from backend.app.services.retrieval import search_chunks
-from backend.app.services.save import save_document, ALLOWED_EXTENSIONS, MAX_FILE_SIZE
+from backend.app.services.save import save_document
 from backend.app.settings import settings
 
 
