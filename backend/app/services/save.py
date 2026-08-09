@@ -12,10 +12,29 @@ MAX_FILE_SIZE = 500 * 1024 * 1024
 COPY_CHUNK_SIZE = 1024 * 1024
 
 
+def validate_document(document: UploadFile) -> None:
+    filename = document.filename
+    extension = Path(filename).suffix.lower() if filename else ""
+
+    if extension not in ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail="Only PDF, TXT and DOCX files are allowed",
+        )
+
+    if document.size is not None and document.size > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+            detail="File size must not exceed 500 MB",
+        )
+
+
 def save_document(document: UploadFile, db: Session) -> Document:
     filename = document.filename
-    storage_dir: Path | None = None
     extension = Path(filename).suffix.lower() if filename else ""
+    storage_dir: Path | None = None
+
+    validate_document(document)
 
     try:
         db_document = Document(
