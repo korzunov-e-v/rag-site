@@ -1,8 +1,8 @@
 from datetime import datetime
 
 from sqlalchemy import DateTime, String, func
-from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import Enum as SQLEnum
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.app.db.base import Base
 from backend.app.db.enums import DocumentStatus
@@ -25,6 +25,10 @@ class Document(Base):
         server_default=func.now(),
     )
     description: Mapped[str | None] = mapped_column(String(500))
+    chunks: Mapped[list["DocumentChunk"]] = relationship(
+        back_populates="document",
+        cascade="all, delete-orphan",
+    )
 
     def __repr__(self) -> str:
         return f"Document(id={repr(self.id)}, filename={repr(self.filename)})"
