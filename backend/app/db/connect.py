@@ -1,9 +1,9 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-from backend.app.db.base import Base
+from backend.app.settings import settings
 
-engine = create_engine("postgresql+psycopg2://postgres:postgres@localhost:5432/rag")
+engine = create_engine(settings.database_url)
 SessionLocal = sessionmaker(bind=engine)
 
 
@@ -13,7 +13,3 @@ def get_db():
         yield db
     finally:
         db.close()
-
-
-def create_db_and_tables():
-    Base.metadata.create_all(bind=engine)

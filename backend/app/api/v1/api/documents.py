@@ -5,21 +5,21 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from backend.app.api.v1.router import v1_router
-from backend.app.api.v1.schemas import DocumentResponse
+from backend.app.api.v1.schemas import DocumentResponse, DocumentResponsePre
 from backend.app.db.connect import get_db
 from backend.app.db.models.document import Document
 
-from backend.app.services.process_doc import process_doc
+from backend.app.tasks.documents import process_document
 from backend.app.services.save import save_document
 
 
-@v1_router.post("/documents", response_model=DocumentResponse)
+@v1_router.post("/documents", response_model=DocumentResponsePre)
 def post_document(
     document: UploadFile,
     db: Annotated[Session, Depends(get_db)],
 ) -> Document:
     db_document = save_document(document, db)
-    process_doc(db_document, db)
+    process_document.delay(db_document.id)
 
     return db_document
 

@@ -4,6 +4,9 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     model_config = {"env_file": ".env"}
 
+    database_url: str = "postgresql+psycopg2://postgres:postgres@db:5432/rag"
+    rabbitmq_url: str = "amqp://guest:guest@rabbitmq:5672//"
+
     openrouter_llm_model: str = "llama2"
     openrouter_embedding_model: str = "openai/text-embedding-3-small"
     openrouter_api_key: str

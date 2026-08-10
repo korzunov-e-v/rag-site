@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel, ConfigDict
 
 
@@ -9,6 +11,18 @@ class DocumentCreate(BaseModel):
     filename: str
 
 
+class DocumentResponsePre(Model):
+    id: int
+    filename: str
+    status: str
+
+
 class DocumentResponse(Model):
     id: int
     filename: str
+    content_type: str
+    size: int
+    storage_path: str
+    status: str
+    created_at: datetime
+    description: str | None
