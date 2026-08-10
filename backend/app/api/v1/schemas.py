@@ -22,7 +22,6 @@ class DocumentResponse(Model):
     filename: str
     content_type: str
     size: int
-    storage_path: str
     status: str
     created_at: datetime
     description: str | None

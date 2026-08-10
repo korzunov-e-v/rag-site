@@ -6,6 +6,11 @@ from sqlalchemy.orm import Session
 from starlette import status
 
 from backend.app.db.models import Document
+from backend.app.services.storage import s3_storage
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 ALLOWED_EXTENSIONS = {".pdf", ".txt", ".docx"}
 MAX_FILE_SIZE = 500 * 1024 * 1024
@@ -14,7 +19,24 @@ COPY_CHUNK_SIZE = 1024 * 1024
 
 def validate_document(document: UploadFile) -> None:
     filename = document.filename
-    extension = Path(filename).suffix.lower() if filename else ""
+
+    if not filename:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Filename is required",
+        )
+
+    if document.size is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File size is required",
+        )
+    if document.size == 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File must not be empty",
+        )
+    extension = Path(filename).suffix.lower()
 
     if extension not in ALLOWED_EXTENSIONS:
         raise HTTPException(
@@ -22,7 +44,7 @@ def validate_document(document: UploadFile) -> None:
             detail="Only PDF, TXT and DOCX files are allowed",
         )
 
-    if document.size is not None and document.size > MAX_FILE_SIZE:
+    if document.size > MAX_FILE_SIZE:
         raise HTTPException(
             status_code=status.HTTP_413_CONTENT_TOO_LARGE,
             detail="File size must not exceed 500 MB",
@@ -31,51 +53,41 @@ def validate_document(document: UploadFile) -> None:
 
 def save_document(document: UploadFile, db: Session) -> Document:
     filename = document.filename
-    extension = Path(filename).suffix.lower() if filename else ""
-    storage_dir: Path | None = None
-
     validate_document(document)
 
     try:
         db_document = Document(
             filename=filename,
             content_type=str(document.content_type),
-            size=0,
-            storage_path="",
+            size=document.size,
+            storage_key="",
         )
         db.add(db_document)
         db.flush()
 
-        uploads_dir = Path("./uploads")
-        uploads_dir.mkdir(parents=True, exist_ok=True)
+        storage_key = f"documents/{db_document.id}/{filename}"
 
-        storage_dir = uploads_dir / str(db_document.id)
-        storage_path = storage_dir / f"original{extension}"
-        storage_dir.mkdir(parents=True, exist_ok=True)
-        actual_size = 0
-        with storage_path.open("wb") as buffer:
-            while chunk := document.file.read(COPY_CHUNK_SIZE):
-                actual_size += len(chunk)
-                if actual_size > MAX_FILE_SIZE:
-                    raise HTTPException(
-                        status_code=status.HTTP_413_CONTENT_TOO_LARGE,
-                        detail="File size must not exceed 500 MB",
-                    )
-                buffer.write(chunk)
+        s3_storage.upload(
+            document.file,
+            storage_key,
+        )
 
-        db_document.size = actual_size
-        db_document.storage_path = str(storage_path)
+        db_document.storage_key = storage_key
+
         db.commit()
+        db.refresh(db_document)
+
         return db_document
+
     except HTTPException:
         db.rollback()
-        if storage_dir is not None:
-            shutil.rmtree(storage_dir, ignore_errors=True)
         raise
+
     except Exception as error:
         db.rollback()
-        if storage_dir is not None:
-            shutil.rmtree(storage_dir, ignore_errors=True)
+        if "storage_key" in locals():
+            s3_storage.delete(storage_key)
+        logger.exception("Failed to upload document")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to upload document",

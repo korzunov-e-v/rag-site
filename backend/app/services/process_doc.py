@@ -1,3 +1,6 @@
+import tempfile
+from pathlib import Path
+
 from sqlalchemy.orm import Session
 
 from backend.app.db.enums import DocumentStatus
@@ -5,6 +8,7 @@ from backend.app.db.models import Document, DocumentChunk
 from backend.app.services.chunking import split_text
 from backend.app.services.embeddings import create_embeddings
 from backend.app.services.extraction import get_text
+from backend.app.services.storage import s3_storage
 
 
 def process_doc(document: Document, db: Session) -> None:
@@ -12,7 +16,13 @@ def process_doc(document: Document, db: Session) -> None:
     db.commit()
 
     try:
-        text = get_text(document.storage_path)
+        with tempfile.NamedTemporaryFile() as temp_file:
+            file = s3_storage.download(document.storage_key)
+
+            temp_file.write(file.read())
+            temp_file.flush()
+
+            text = get_text(Path(temp_file.name))
 
         if text is None:
             raise ValueError("Failed to extract document text")
@@ -36,6 +46,5 @@ def process_doc(document: Document, db: Session) -> None:
         db.commit()
 
     except Exception:
-        document.status = DocumentStatus.FAILED
-        db.commit()
+        db.rollback()
         raise

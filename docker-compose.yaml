@@ -1,17 +1,20 @@
 services:
     app:
         build: .
-        command: uv run python -m backend.app.main
+        command: uv run uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload
         ports:
             - "8000:8000"
         env_file:
             - .env
         volumes:
+            - ./backend:/app/backend
             - uploads:/app/uploads
         depends_on:
             db:
                 condition: service_healthy
             rabbitmq:
+                condition: service_started
+            minio:
                 condition: service_started
 
     worker:
@@ -20,11 +23,13 @@ services:
         env_file:
             - .env
         volumes:
-            - uploads:/app/uploads
+            - ./backend:/app/backend
         depends_on:
             db:
                 condition: service_healthy
             rabbitmq:
+                condition: service_started
+            minio:
                 condition: service_started
     db:
         image: pgvector/pgvector:pg18
@@ -46,7 +51,18 @@ services:
         ports:
             - "5672:5672"
             - "15672:15672"
-
+    minio:
+        image: minio/minio
+        command: server /data --console-address ":9001"
+        ports:
+            - "9000:9000"
+            - "9001:9001"
+        environment:
+            MINIO_ROOT_USER: minio
+            MINIO_ROOT_PASSWORD: minio123
+        volumes:
+            - minio_data:/data
 volumes:
     postgres_data:
     uploads:
+    minio_data:

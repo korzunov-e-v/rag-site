@@ -15,7 +15,7 @@ class Document(Base):
     filename: Mapped[str] = mapped_column(String(255))
     content_type: Mapped[str | None] = mapped_column(String(100))
     size: Mapped[int | None] = mapped_column()
-    storage_path: Mapped[str] = mapped_column(String(500))
+    storage_key: Mapped[str] = mapped_column(String(500))
     status: Mapped[DocumentStatus] = mapped_column(
         SQLEnum(DocumentStatus),
         default=DocumentStatus.UPLOADED,
