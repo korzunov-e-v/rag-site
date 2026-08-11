@@ -4,7 +4,7 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    # model_config = {"env_file": ".env"}
+    model_config = {"env_file": ".env"}
 
     database_url: str = "postgresql+psycopg2://postgres:postgres@db:5432/rag"
     rabbitmq_url: str = "amqp://guest:guest@rabbitmq:5672//"
@@ -22,17 +22,32 @@ class Settings(BaseSettings):
     s3_bucket: str = "documents"
 
     system_prompt: str = """
-    Ты отвечаешь на вопрос пользователя, используя только
-предоставленный контекст. Отвечай на русском языке.
+    Ты отвечаешь на вопрос пользователя, используя только предоставленный контекст.
 
-Контекст:
-{chunks}
+    Верни JSON строго такого вида:
 
-...
+    {{
+      "answer": "ответ на вопрос",
+      "quotes": [
+        "дословная цитата из контекста"
+      ]
+    }}
 
-Вопрос:
-{query}"""
+    Правила:
+    - answer — ответ пользователю на русском языке.
+    - quotes — 1-3 наиболее важных дословных фрагмента из контекста.
+    - Цитаты должны полностью и дословно присутствовать в предоставленном контексте.
+    - Не изменяй слова, окончания, знаки препинания внутри цитат.
+    - Не придумывай цитаты.
 
+    Контекст:
+    {chunks}
+
+    ...
+
+    Вопрос:
+    {query}
+    """
 settings = Settings()
 logging.basicConfig(
     level=logging.INFO,
