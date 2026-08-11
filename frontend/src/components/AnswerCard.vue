@@ -1,30 +1,29 @@
 <script setup lang="ts">
 import type { Answer } from '../types/ask'
-function highlightQuote(text: string, quote: string) {
-  if (!quote) {
-    return [{ text, highlighted: false }]
-  }
-
+function getQuoteContext(text: string, quote: string, radius = 200) {
   const index = text.indexOf(quote)
 
   if (index === -1) {
-    return [{ text, highlighted: false }]
+    return {
+      before: '',
+      quote: '',
+      after: text,
+      hasQuote: false,
+    }
   }
 
-  return [
-    {
-      text: text.slice(0, index),
-      highlighted: false,
-    },
-    {
-      text: quote,
-      highlighted: true,
-    },
-    {
-      text: text.slice(index + quote.length),
-      highlighted: false,
-    },
-  ].filter((part) => part.text)
+  const start = Math.max(0, index - radius)
+  const end = Math.min(
+    text.length,
+    index + quote.length + radius,
+  )
+
+  return {
+    before: text.slice(start, index),
+    quote,
+    after: text.slice(index + quote.length, end),
+    hasQuote: true,
+  }
 }
 defineProps<{
   answer: Answer
@@ -98,15 +97,41 @@ defineProps<{
             </span>
           </div>
 
-          <p class="whitespace-pre-line text-sm leading-6 text-slate-600">
-  «<template
-    v-for="(part, partIndex) in highlightQuote(source.text, source.quote)"
-    :key="partIndex"
-  ><mark
-      v-if="part.highlighted"
-      class="rounded bg-yellow-200 px-0.5 text-slate-900"
-    >{{ part.text }}</mark><template v-else>{{ part.text }}</template></template>»
-</p>
+          <div
+  v-for="(source, index) in answer.sources"
+  :key="source.chunk_id"
+  class="rounded-xl bg-slate-50 p-4"
+>
+  <div class="mb-2 flex items-center justify-between">
+    <span class="text-xs font-medium text-slate-400">
+      Источник {{ index + 1 }}
+    </span>
+
+    <span class="text-xs text-slate-400">
+      {{ source.distance.toFixed(3) }}
+    </span>
+  </div>
+
+  <p class="text-sm leading-6 text-slate-600">
+    <template
+      v-for="(part, partIndex) in [
+        getQuoteContext(source.text, source.quote).before,
+        getQuoteContext(source.text, source.quote).quote,
+        getQuoteContext(source.text, source.quote).after,
+      ]"
+      :key="partIndex"
+    >
+      <mark
+        v-if="partIndex === 1 && part"
+        class="rounded bg-yellow-200 px-0.5 text-slate-900"
+      >
+        {{ part }}
+      </mark>
+
+      <span v-else>{{ part }}</span>
+    </template>
+  </p>
+</div>
         </div>
       </div>
     </div>

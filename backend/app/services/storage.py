@@ -14,7 +14,7 @@ class S3Storage:
             "s3",
             endpoint_url=settings.s3_endpoint_url,
             aws_access_key_id=settings.s3_access_key,
-            aws_secret_access_key=settings.s3_secret_key,
+            aws_secret_access_key=settings.s3_secret_key.get_secret_value(),
         )
 
     def upload(self, file, key: str) -> None:

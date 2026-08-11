@@ -1,8 +1,24 @@
 <script setup lang="ts">
+import { onMounted, onUnmounted } from 'vue'
 import DocumentSidebar from './components/DocumentSidebar.vue'
 import Search from './components/Search.vue'
-</script>
+import { socket } from './services/socket'
 
+onMounted(() => {
+  socket.on('connect', () => {
+    console.log('Socket.IO connected:', socket.id)
+  })
+
+  socket.on('connect_error', (error) => {
+    console.error('Socket.IO connection error:', error)
+  })
+})
+
+onUnmounted(() => {
+  socket.off('connect')
+  socket.off('connect_error')
+})
+</script>
 <template>
   <div class="flex h-screen overflow-hidden bg-slate-50">
     <DocumentSidebar />

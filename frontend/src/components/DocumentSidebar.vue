@@ -6,6 +6,10 @@ import {
   uploadDocument,
 } from '../api/documents'
 import type { Document } from '../types/document'
+import {
+  useDocumentStatus,
+  type DocumentStatusEvent,
+} from '../composables/useDocumentStatus'
 
 const documents = ref<Document[]>([])
 const loading = ref(true)
@@ -89,6 +93,18 @@ function statusLabel(status: Document['status']): string {
       return 'Ошибка'
   }
 }
+function handleDocumentStatus(event: DocumentStatusEvent) {
+  const document = documents.value.find(
+    (item) => item.id === event.document_id,
+  )
+
+  if (!document) {
+    return
+  }
+
+  document.status = event.status
+}
+useDocumentStatus(handleDocumentStatus)
 
 onMounted(loadDocuments)
 </script>

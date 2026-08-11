@@ -1,5 +1,6 @@
 import logging
 
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings
 
 
@@ -11,15 +12,17 @@ class Settings(BaseSettings):
 
     openrouter_llm_model: str
     openrouter_embedding_model: str
-    openrouter_api_key: str
+    openrouter_api_key: SecretStr
     openrouter_embedding_model_dimensions: int
 
     max_distance: float
 
     s3_endpoint_url: str = "http://minio:9000"
     s3_access_key: str = "minio"
-    s3_secret_key: str = "minio123"
+    s3_secret_key: SecretStr = "minio123"
     s3_bucket: str = "documents"
+
+    redis_url: str = "redis://redis:6379/0"
 
     system_prompt: str = """
     Ты отвечаешь на вопрос пользователя, используя только предоставленный контекст.

@@ -64,6 +64,10 @@ services:
             MINIO_ROOT_PASSWORD: minio123
         volumes:
             - minio_data:/data
+
+    redis:
+        image: redis:8-alpine
+        restart: unless-stopped
 volumes:
     postgres_data:
     uploads:
