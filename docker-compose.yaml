@@ -7,7 +7,7 @@ services:
         env_file:
             - .env
         volumes:
-            - ./backend:/app
+            - ./backend:/app/backend
         depends_on:
             db:
                 condition: service_healthy
@@ -82,6 +82,5 @@ services:
         restart: unless-stopped
 volumes:
     postgres_data:
-    uploads:
     minio_data:
     frontend_node_modules:
