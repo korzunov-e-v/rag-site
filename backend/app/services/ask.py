@@ -28,16 +28,18 @@ async def ask_documents(query: str, db):
         )
 
     tasks = [
-        generate_document_answer(
-            query,
-            document_chunks,
+        process_document(
+            query=query,
+            document_id=document_id,
+            document_chunks=document_chunks,
         )
-        for document_chunks in chunks_by_document.values()
+        for document_id, document_chunks
+        in chunks_by_document.items()
     ]
 
     for task in asyncio.as_completed(tasks):
-        answer = await task
-        yield answer
+        yield await task
+
 
 async def generate_document_answer(
     query: str,
@@ -72,7 +74,15 @@ async def generate_document_answer(
         ],
     )
 
-    response_content = response.choices[0].message.content.strip()
+    response_content = response.choices[0].message.content
+
+    if not response_content:
+        raise ValueError("LLM returned empty response")
+
+    print("LLM RESPONSE:")
+    print(response_content)
+
+    response_content = response_content.strip()
 
     if response_content.startswith("```json"):
         response_content = response_content[7:]
@@ -119,3 +129,28 @@ async def generate_document_answer(
         "answer": answer,
         "sources": sources,
     }
+
+
+async def process_document(
+    query: str,
+    document_id: int,
+    document_chunks: list,
+):
+    try:
+        return await generate_document_answer(
+            query,
+            document_chunks,
+        )
+
+    except Exception as exc:
+        print(
+            f"DOCUMENT ERROR: "
+            f"id={document_id} "
+            f"error={exc}"
+        )
+
+        return {
+            "document_id": document_id,
+            "filename": document_chunks[0][0].document.filename,
+            "error": str(exc),
+        }

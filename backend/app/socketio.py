@@ -2,11 +2,12 @@ import socketio
 
 from backend.app.db.connect import SessionLocal
 from backend.app.settings import settings
-import asyncio
-
 from backend.app.services.ask import ask_documents
 
-manager = socketio.AsyncRedisManager(settings.redis_url)
+
+manager = socketio.AsyncRedisManager(
+    settings.redis_url
+)
 
 sio = socketio.AsyncServer(
     async_mode="asgi",
@@ -25,6 +26,7 @@ async def emit_document_status(
         f"id={document_id} "
         f"status={status}"
     )
+
     await sio.emit(
         "document:status",
         {
@@ -38,6 +40,12 @@ async def emit_document_status(
 async def ask(sid, data):
     query = data["query"]
 
+    print(
+        f"SOCKET.IO ASK: "
+        f"sid={sid} "
+        f"query={query!r}"
+    )
+
     await sio.emit(
         "ask:started",
         {},
@@ -47,12 +55,41 @@ async def ask(sid, data):
     db = SessionLocal()
 
     try:
-        async for answer in ask_documents(query, db):
+        async for result in ask_documents(query, db):
+
+            if "error" in result:
+                print(
+                    f"DOCUMENT ERROR: "
+                    f"id={result['document_id']} "
+                    f"filename={result['filename']} "
+                    f"error={result['error']}"
+                )
+
+                await sio.emit(
+                    "document:error",
+                    {
+                        "document_id": result["document_id"],
+                        "filename": result["filename"],
+                        "message": "Не удалось обработать документ",
+                    },
+                    to=sid,
+                )
+
+                continue
+
+            print(
+                f"SOCKET.IO ANSWER: "
+                f"document_id={result['document_id']} "
+                f"filename={result['filename']}"
+            )
+
             await sio.emit(
                 "answer",
-                answer,
+                result,
                 to=sid,
             )
+
+        print("SOCKET.IO EMIT: ask:finished")
 
         await sio.emit(
             "ask:finished",
