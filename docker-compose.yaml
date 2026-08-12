@@ -9,6 +9,7 @@ services:
         volumes:
             - ./backend:/app/backend
             - uploads:/app/uploads
+            - ./alembic.ini:/app/alembic.ini
         depends_on:
             db:
                 condition: service_healthy

@@ -31,9 +31,9 @@ async def create_embedding(text: str) -> list[float]:
     return response.data[0].embedding
 
 
-def create_embeddings(texts: list[str]) -> list[list[float]]:
+async def create_embeddings(texts: list[str]) -> list[list[float]]:
     try:
-        response = client.embeddings.create(
+        response = await client.embeddings.create(
             model=settings.openrouter_embedding_model,
             input=texts,
         )
