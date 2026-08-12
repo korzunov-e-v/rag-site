@@ -15,6 +15,11 @@ function handleAnswer(answer: Answer) {
   console.log('🔥 ANSWER RECEIVED:', answer)
 
   answers.value.push(answer)
+
+  answers.value.sort(
+    (a, b) => a.distance - b.distance
+  )
+
   receivedCount.value++
 }
 
