@@ -16,15 +16,15 @@ from backend.app.settings import settings
 
 
 @v1_router.post("/search")
-def search(
+async def search(
     query: str,
     db: Annotated[Session, Depends(get_db)],
 ):
-    return search_documents(query, db)
+    return await search_documents(query, db)
 
 
 @v1_router.post("/ask")
-def ask(
+async def ask(
     query: str,
     db: Annotated[Session, Depends(get_db)],
 ):

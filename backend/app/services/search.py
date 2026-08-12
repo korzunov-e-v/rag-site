@@ -4,8 +4,8 @@ from backend.app.services.embeddings import create_embedding
 from backend.app.services.retrieval import search_chunks
 
 
-def search_documents(query: str, db: Session):
-    query_embedding = create_embedding(query)
+async def search_documents(query: str, db: Session):
+    query_embedding = await create_embedding(query)
 
     return [
         {

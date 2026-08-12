@@ -9,9 +9,11 @@ const answers = ref<Answer[]>([])
 const loading = ref(false)
 const error = ref<string | null>(null)
 const searched = ref(false)
+const receivedCount = ref(0)
 
 function handleAnswer(answer: Answer) {
   answers.value.push(answer)
+  receivedCount.value++
 }
 
 function handleFinished() {
@@ -43,6 +45,7 @@ function search() {
   }
 
   answers.value = []
+  receivedCount.value = 0
   error.value = null
   searched.value = true
   loading.value = true
@@ -159,6 +162,19 @@ function search() {
         </div>
 
         <SearchResults :answers="answers"/>
+        <div
+            v-if="loading"
+            class="mt-4 flex items-center gap-2 text-sm text-slate-500"
+        >
+          <span
+              class="h-2 w-2 animate-pulse rounded-full bg-purple-500"
+          />
+
+                  Ищем по остальным документам…
+                  <span>
+            Получено ответов: {{ receivedCount }}
+          </span>
+        </div>
       </template>
 
       <!-- Nothing found -->

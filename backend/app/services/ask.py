@@ -1,3 +1,4 @@
+import asyncio
 import json
 from collections import defaultdict
 
@@ -25,88 +26,96 @@ async def ask_documents(query: str, db):
         chunks_by_document[chunk.document_id].append(
             (chunk, distance)
         )
-    documents = sorted(
-        chunks_by_document.items(),
-        key=lambda item: min(
-            distance for _, distance in item[1]
-        ),
+
+    tasks = [
+        generate_document_answer(
+            query,
+            document_chunks,
+        )
+        for document_chunks in chunks_by_document.values()
+    ]
+
+    for task in asyncio.as_completed(tasks):
+        answer = await task
+        yield answer
+
+async def generate_document_answer(
+    query: str,
+    document_chunks: list,
+):
+    document = document_chunks[0][0].document
+
+    context = "\n\n".join(
+        f"[Источник {index + 1}]\n{chunk.text}"
+        for index, (chunk, _) in enumerate(document_chunks)
     )
-    for document_id, document_chunks in documents:
 
-        context = "\n\n".join(
-            f"[Источник {index + 1}]\n{chunk.text}"
-            for index, (chunk, _) in enumerate(document_chunks)
-        )
+    distance = min(
+        distance
+        for _, distance in document_chunks
+    )
 
-        distance = min(
-            distance
-            for _, distance in document_chunks
-        )
+    response = await client.chat.completions.create(
+        model=settings.openrouter_llm_model,
+        messages=[
+            {
+                "role": "system",
+                "content": settings.system_prompt.format(
+                    chunks=context,
+                    query=query,
+                ),
+            },
+            {
+                "role": "user",
+                "content": query,
+            },
+        ],
+    )
 
-        response = await client.chat.completions.create(
-            model=settings.openrouter_llm_model,
-            messages=[
-                {
-                    "role": "system",
-                    "content": settings.system_prompt.format(
-                        chunks=context,
-                        query=query,
-                    ),
-                },
-                {
-                    "role": "user",
-                    "content": query,
-                },
-            ],
-        )
+    response_content = response.choices[0].message.content.strip()
 
-        response_content = response.choices[0].message.content
+    if response_content.startswith("```json"):
+        response_content = response_content[7:]
 
-        print("LLM RESPONSE:")
-        print(response_content)
+    if response_content.endswith("```"):
+        response_content = response_content[:-3]
 
-        response_content = response_content.strip()
+    response_content = response_content.strip()
 
-        if response_content.startswith("```json"):
-            response_content = response_content[7:]
+    response_data = json.loads(response_content)
 
-        if response_content.endswith("```"):
-            response_content = response_content[:-3]
+    answer = response_data["answer"]
+    quotes = response_data.get("quotes", [])
 
-        response_content = response_content.strip()
+    sources = []
+    used_texts = set()
 
-        response_data = json.loads(response_content)
+    for quote in quotes[:3]:
+        for chunk, chunk_distance in document_chunks:
+            if chunk.text in used_texts:
+                continue
 
-        answer = response_data["answer"]
-        quotes = response_data.get("quotes", [])
+            if quote in chunk.text:
+                sources.append(
+                    {
+                        "chunk_id": chunk.id,
+                        "text": chunk.text,
+                        "quote": quote,
+                        "distance": chunk_distance,
+                    }
+                )
 
-        sources = []
-        used_texts = set()
+                used_texts.add(chunk.text)
+                break
 
-        for quote in quotes[:3]:
-            for chunk, chunk_distance in document_chunks:
-                if chunk.text in used_texts:
-                    continue
+    sources.sort(
+        key=lambda source: source["distance"]
+    )
 
-                if quote in chunk.text:
-                    sources.append(
-                        {
-                            "chunk_id": chunk.id,
-                            "text": chunk.text,
-                            "quote": quote,
-                            "distance": chunk_distance,
-                        }
-                    )
-
-                    used_texts.add(chunk.text)
-                    break
-
-        sources.sort(key=lambda source: source["distance"])
-
-        yield {
-            "document_id": document_id,
-            "filename": document_chunks[0][0].document.filename,
-            "distance": distance,
-            "answer": answer,
-            "sources": sources,
-        }
+    return {
+        "document_id": document.id,
+        "filename": document.filename,
+        "distance": distance,
+        "answer": answer,
+        "sources": sources,
+    }
