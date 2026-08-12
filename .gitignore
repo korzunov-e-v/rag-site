@@ -335,6 +335,9 @@ $RECYCLE.BIN/
 
 # End of https://www.toptal.com/developers/gitignore/api/python,jetbrains+all,visualstudiocode,windows,linux,virtualenv
 
+node_modules/
+frontend/dist/
+
 repomix-output.xml
 uploads
 node_modules/
