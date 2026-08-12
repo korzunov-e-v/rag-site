@@ -7,8 +7,8 @@ from backend.app.services.retrieval import search_chunks
 from backend.app.settings import settings
 
 
-def ask_documents(query: str, db):
-    query_embedding = create_embedding(query)
+async def ask_documents(query: str, db):
+    query_embedding = await create_embedding(query)
 
     chunks = search_chunks(
         query_embedding=query_embedding,
@@ -17,7 +17,7 @@ def ask_documents(query: str, db):
     )
 
     if not chunks:
-        return []
+        return
 
     chunks_by_document = defaultdict(list)
 
@@ -25,10 +25,13 @@ def ask_documents(query: str, db):
         chunks_by_document[chunk.document_id].append(
             (chunk, distance)
         )
-
-    answers = []
-    for document_id, document_chunks in chunks_by_document.items():
-        document = document_chunks[0][0].document
+    documents = sorted(
+        chunks_by_document.items(),
+        key=lambda item: min(
+            distance for _, distance in item[1]
+        ),
+    )
+    for document_id, document_chunks in documents:
 
         context = "\n\n".join(
             f"[Источник {index + 1}]\n{chunk.text}"
@@ -39,7 +42,8 @@ def ask_documents(query: str, db):
             distance
             for _, distance in document_chunks
         )
-        response = client.chat.completions.create(
+
+        response = await client.chat.completions.create(
             model=settings.openrouter_llm_model,
             messages=[
                 {
@@ -99,16 +103,10 @@ def ask_documents(query: str, db):
 
         sources.sort(key=lambda source: source["distance"])
 
-        answers.append(
-            {
-                "document_id": document_id,
-                "filename": document.filename,
-                "distance": distance,
-                "answer": answer,
-                "sources": sources,
-            }
-        )
-
-    answers.sort(key=lambda item: item["distance"])
-
-    return answers
+        yield {
+            "document_id": document_id,
+            "filename": document_chunks[0][0].document.filename,
+            "distance": distance,
+            "answer": answer,
+            "sources": sources,
+        }

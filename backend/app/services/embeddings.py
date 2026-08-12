@@ -15,9 +15,9 @@ def _is_retryable(error: Exception) -> bool:
     return False
 
 
-def create_embedding(text: str) -> list[float]:
+async def create_embedding(text: str) -> list[float]:
     try:
-        response = client.embeddings.create(
+        response = await client.embeddings.create(
             model=settings.openrouter_embedding_model,
             input=text,
         )
