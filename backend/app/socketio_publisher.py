@@ -10,6 +10,12 @@ def emit_document_status(
     document_id: int,
     status: str,
 ) -> None:
+    print(
+        "REDIS SOCKET EMIT:",
+        document_id,
+        status,
+        settings.redis_url,
+    )
     manager.emit(
         "document:status",
         {

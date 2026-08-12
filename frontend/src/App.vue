@@ -28,7 +28,7 @@ async function initializeAuth() {
   }
 
   try {
-    await getMe(token)
+    await getMe()
 
     authenticated.value = true
     connectSocket()
@@ -39,7 +39,6 @@ async function initializeAuth() {
     initializing.value = false
   }
 }
-
 function handleAuthenticated() {
   authenticated.value = true
 }

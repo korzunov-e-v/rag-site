@@ -94,6 +94,8 @@ function statusLabel(status: Document['status']): string {
   }
 }
 function handleDocumentStatus(event: DocumentStatusEvent) {
+  console.log('📡 DOCUMENT STATUS:', event)
+
   const document = documents.value.find(
     (item) => item.id === event.document_id,
   )

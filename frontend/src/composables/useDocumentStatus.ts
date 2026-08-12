@@ -10,8 +10,10 @@ export function useDocumentStatus(
   onStatus: (event: DocumentStatusEvent) => void,
 ) {
   onMounted(() => {
-    socket.on('document:status', onStatus)
-  })
+  console.log('📡 subscribing to document:status')
+
+  socket.on('document:status', onStatus)
+})
 
   onUnmounted(() => {
     socket.off('document:status', onStatus)

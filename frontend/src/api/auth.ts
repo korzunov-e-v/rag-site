@@ -1,11 +1,15 @@
 import type {
   LoginRequest,
+  RefreshRequest,
   RegisterRequest,
   TokenResponse,
   User,
 } from '../types/auth'
+import { apiFetch } from './client'
 
-async function handleResponse<T>(response: Response): Promise<T> {
+async function handleResponse<T>(
+  response: Response,
+): Promise<T> {
   if (response.ok) {
     return response.json()
   }
@@ -19,7 +23,8 @@ async function handleResponse<T>(response: Response): Promise<T> {
       message = data.detail
     }
   } catch {
-    // Если backend не вернул JSON — оставляем стандартную ошибку.
+    // Если backend не вернул JSON —
+    // оставляем стандартную ошибку.
   }
 
   throw new Error(message)
@@ -53,12 +58,22 @@ export async function register(
   return handleResponse<TokenResponse>(response)
 }
 
-export async function getMe(token: string): Promise<User> {
-  const response = await fetch('/api/v1/auth/me', {
+export async function refresh(
+  data: RefreshRequest,
+): Promise<TokenResponse> {
+  const response = await fetch('/api/v1/auth/refresh', {
+    method: 'POST',
     headers: {
-      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
     },
+    body: JSON.stringify(data),
   })
+
+  return handleResponse<TokenResponse>(response)
+}
+
+export async function getMe(): Promise<User> {
+  const response = await apiFetch('/api/v1/auth/me')
 
   return handleResponse<User>(response)
 }

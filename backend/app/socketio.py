@@ -129,6 +129,10 @@ async def ask(sid, data):
 
 @sio.event
 async def connect(sid, environ, auth):
+    print(
+        "SOCKET.IO CONNECT:",
+        sid,
+    )
     if not auth:
         return False
 
