@@ -5,7 +5,7 @@ from fastapi import UploadFile, HTTPException
 from sqlalchemy.orm import Session
 from starlette import status
 
-from backend.app.db.models import Document
+from backend.app.db.models import Document, User
 from backend.app.services.storage import s3_storage
 import logging
 
@@ -51,14 +51,15 @@ def validate_document(document: UploadFile) -> None:
         )
 
 
-def save_document(document: UploadFile, db: Session) -> Document:
+def save_document(document: UploadFile, current_user: User, db: Session) -> Document:
     filename = document.filename
     validate_document(document)
 
     try:
         db_document = Document(
-            filename=filename,
-            content_type=str(document.content_type),
+            owner_id=current_user.id,
+            filename=document.filename,
+            content_type=document.content_type,
             size=document.size,
             storage_key="",
         )

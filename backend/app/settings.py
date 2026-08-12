@@ -24,6 +24,11 @@ class Settings(BaseSettings):
 
     redis_url: str = "redis://redis:6379/0"
 
+    jwt_secret_key: str
+    jwt_algorithm: str = "HS256"
+    jwt_access_token_expire_minutes: int = 30
+    jwt_refresh_token_expire_days: int = 30
+
     system_prompt: str = """
     Ты отвечаешь на вопрос пользователя, используя только предоставленный контекст.
 

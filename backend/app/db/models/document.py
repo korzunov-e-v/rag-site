@@ -3,6 +3,7 @@ from datetime import datetime
 from sqlalchemy import DateTime, String, func, Text
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import ForeignKey
 
 from backend.app.db.base import Base
 from backend.app.db.enums import DocumentStatus
@@ -32,6 +33,14 @@ class Document(Base):
     error_message: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
+    )
+    owner_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+
+    owner: Mapped["User"] = relationship(
+        back_populates="documents",
     )
 
     def __repr__(self) -> str:

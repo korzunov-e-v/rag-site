@@ -6,3 +6,8 @@ class DocumentStatus(str, Enum):
     PROCESSING = "processing"
     PROCESSED = "processed"
     FAILED = "failed"
+
+
+class UserRole(str, Enum):
+    USER = "user"
+    ADMIN = "admin"

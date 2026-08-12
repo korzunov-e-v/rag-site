@@ -8,12 +8,17 @@ from backend.app.services.retrieval import search_chunks
 from backend.app.settings import settings
 
 
-async def ask_documents(query: str, db):
+async def ask_documents(
+    query: str,
+    db,
+    user_id: int,
+):
     query_embedding = await create_embedding(query)
 
     chunks = search_chunks(
         query_embedding=query_embedding,
         db=db,
+        user_id=user_id,
         limit=10,
     )
 

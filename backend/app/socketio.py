@@ -1,9 +1,12 @@
 import socketio
+import jwt
 
+from backend.app.db.models import User
 from backend.app.db.connect import SessionLocal
 from backend.app.settings import settings
 from backend.app.services.ask import ask_documents
 
+connected_users: dict[str, int] = {}
 
 manager = socketio.AsyncRedisManager(
     settings.redis_url
@@ -38,6 +41,18 @@ async def emit_document_status(
 
 @sio.event
 async def ask(sid, data):
+    user_id = connected_users.get(sid)
+
+    if user_id is None:
+        await sio.emit(
+            "ask:error",
+            {
+                "message": "Необходима авторизация",
+            },
+            to=sid,
+        )
+        return
+
     query = data["query"]
 
     print(
@@ -55,7 +70,7 @@ async def ask(sid, data):
     db = SessionLocal()
 
     try:
-        async for result in ask_documents(query, db):
+        async for result in ask_documents(query, db, user_id):
 
             if "error" in result:
                 print(
@@ -110,3 +125,49 @@ async def ask(sid, data):
 
     finally:
         db.close()
+
+
+@sio.event
+async def connect(sid, environ, auth):
+    if not auth:
+        return False
+
+    token = auth.get("token")
+
+    if not token:
+        return False
+
+    try:
+        payload = jwt.decode(
+            token,
+            settings.jwt_secret_key,
+            algorithms=[settings.jwt_algorithm],
+        )
+
+        user_id = int(payload["sub"])
+
+    except (jwt.PyJWTError, KeyError, TypeError, ValueError):
+        return False
+
+    db = SessionLocal()
+
+    try:
+        user = db.get(User, user_id)
+
+        if user is None:
+            return False
+
+        connected_users[sid] = user.id
+
+        print(
+            f"SOCKET.IO AUTH: "
+            f"sid={sid} "
+            f"user_id={user.id}"
+        )
+
+    finally:
+        db.close()
+
+@sio.event
+async def disconnect(sid):
+    connected_users.pop(sid, None)

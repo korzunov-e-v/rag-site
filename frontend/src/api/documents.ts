@@ -1,7 +1,8 @@
 import type { Document } from '../types/document'
+import { apiFetch } from './client'
 
 export async function getDocuments(): Promise<Document[]> {
-  const response = await fetch('/api/v1/documents')
+  const response = await apiFetch('/api/v1/documents')
 
   if (!response.ok) {
     throw new Error('Не удалось получить документы')
@@ -14,7 +15,7 @@ export async function uploadDocument(file: File): Promise<Document> {
   const formData = new FormData()
   formData.append('document', file)
 
-  const response = await fetch('/api/v1/documents', {
+  const response = await apiFetch('/api/v1/documents', {
     method: 'POST',
     body: formData,
   })
@@ -27,7 +28,7 @@ export async function uploadDocument(file: File): Promise<Document> {
 }
 
 export async function deleteDocument(id: number): Promise<void> {
-  const response = await fetch(`/api/v1/documents/${id}`, {
+  const response = await apiFetch(`/api/v1/documents/${id}`, {
     method: 'DELETE',
   })
 
