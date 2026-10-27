@@ -7,14 +7,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.api.dependencies import get_current_user
 from backend.app.api.v1.router import v1_router
-from backend.app.api.v1.schemas import DocumentResponse
+from backend.app.api.v1.schemas import DocumentFromUrl, DocumentResponse
 from backend.app.db.connect import get_db
 from backend.app.db.models import User
 from backend.app.db.models.document import Document
 from backend.app.services.storage import s3_storage
 
 from backend.app.tasks.documents import process_document
-from backend.app.services.save import save_document
+from backend.app.services.fetch_url import fetch_url
+from backend.app.services.save import save_document, store_document
 
 
 async def get_user_document(
@@ -43,6 +44,26 @@ async def post_document(
     current_user: User = Depends(get_current_user),
 ) -> Document:
     db_document = await save_document(document, current_user, db)
+    process_document.delay(db_document.id)
+
+    return db_document
+
+
+@v1_router.post("/documents/url", response_model=DocumentResponse)
+async def post_document_from_url(
+    data: DocumentFromUrl,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: User = Depends(get_current_user),
+) -> Document:
+    fetched = await fetch_url(str(data.url))
+    db_document = await store_document(
+        fetched.file,
+        fetched.filename,
+        fetched.content_type,
+        fetched.size,
+        current_user,
+        db,
+    )
     process_document.delay(db_document.id)
 
     return db_document

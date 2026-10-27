@@ -105,7 +105,8 @@ docker compose down -v
 | `POST` | `/auth/login` | Авторизация |
 | `GET` | `/auth/me` | Текущий пользователь |
 | `POST` | `/auth/refresh` | Обновление токенов |
-| `POST` | `/documents` | Загрузка документа |
+| `POST` | `/documents` | Загрузка документа (PDF, TXT, MD, DOCX, HTML, PNG, JPG) |
+| `POST` | `/documents/url` | Импорт документа по ссылке |
 | `GET` | `/documents` | Список документов пользователя |
 | `GET`, `DELETE` | `/documents/{document_id}` | Просмотр или удаление документа |
 | `POST` | `/search` | Поиск по документам |

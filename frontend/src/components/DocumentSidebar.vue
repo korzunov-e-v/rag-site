@@ -4,6 +4,7 @@ import {
   deleteDocument,
   getDocuments,
   uploadDocument,
+  uploadDocumentFromUrl,
 } from '../api/documents'
 import type { Document } from '../types/document'
 import {
@@ -15,6 +16,9 @@ const documents = ref<Document[]>([])
 const loading = ref(true)
 const uploading = ref(false)
 const error = ref<string | null>(null)
+const url = ref('')
+
+const ACCEPTED_FILES = '.pdf,.txt,.md,.docx,.html,.htm,.png,.jpg,.jpeg'
 
 async function loadDocuments() {
   try {
@@ -51,6 +55,29 @@ async function handleUpload(event: Event) {
   } finally {
     uploading.value = false
     input.value = ''
+  }
+}
+
+async function handleUrlUpload() {
+  const value = url.value.trim()
+
+  if (!value || uploading.value) {
+    return
+  }
+
+  try {
+    uploading.value = true
+    error.value = null
+
+    const document = await uploadDocumentFromUrl(value)
+    documents.value.unshift(document)
+    url.value = ''
+  } catch (err) {
+    error.value = err instanceof Error
+      ? err.message
+      : 'Не удалось загрузить документ по ссылке'
+  } finally {
+    uploading.value = false
   }
 }
 
@@ -134,11 +161,37 @@ onMounted(loadDocuments)
         <input
           type="file"
           class="hidden"
+          :accept="ACCEPTED_FILES"
           :disabled="uploading"
           @change="handleUpload"
         />
       </label>
     </div>
+
+    <form
+      class="flex gap-2 border-b p-3"
+      @submit.prevent="handleUrlUpload"
+    >
+      <input
+        v-model="url"
+        type="url"
+        placeholder="Ссылка на страницу или файл"
+        class="min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2
+               text-sm outline-none transition placeholder:text-slate-400
+               focus:border-purple-400 focus:ring-2 focus:ring-purple-100"
+        :disabled="uploading"
+      />
+
+      <button
+        type="submit"
+        class="shrink-0 rounded-lg border border-slate-200 px-3 py-2 text-sm
+               text-slate-600 transition hover:bg-slate-50
+               disabled:cursor-not-allowed disabled:opacity-50"
+        :disabled="uploading || !url.trim()"
+      >
+        Импорт
+      </button>
+    </form>
 
     <div
       v-if="error"

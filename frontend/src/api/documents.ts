@@ -1,6 +1,23 @@
 import type { Document } from '../types/document'
 import { apiFetch } from './client'
 
+async function errorMessage(
+  response: Response,
+  fallback: string,
+): Promise<string> {
+  try {
+    const data = await response.json()
+
+    if (typeof data.detail === 'string') {
+      return data.detail
+    }
+  } catch {
+    // Ответ не JSON — показываем общую ошибку.
+  }
+
+  return fallback
+}
+
 export async function getDocuments(): Promise<Document[]> {
   const response = await apiFetch('/api/v1/documents')
 
@@ -21,7 +38,27 @@ export async function uploadDocument(file: File): Promise<Document> {
   })
 
   if (!response.ok) {
-    throw new Error('Не удалось загрузить документ')
+    throw new Error(
+      await errorMessage(response, 'Не удалось загрузить документ'),
+    )
+  }
+
+  return response.json()
+}
+
+export async function uploadDocumentFromUrl(url: string): Promise<Document> {
+  const response = await apiFetch('/api/v1/documents/url', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ url }),
+  })
+
+  if (!response.ok) {
+    throw new Error(
+      await errorMessage(response, 'Не удалось загрузить документ по ссылке'),
+    )
   }
 
   return response.json()

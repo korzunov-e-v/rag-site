@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, HttpUrl
 
 
 class Model(BaseModel):
@@ -9,6 +9,10 @@ class Model(BaseModel):
 
 class DocumentCreate(BaseModel):
     filename: str
+
+
+class DocumentFromUrl(BaseModel):
+    url: HttpUrl
 
 
 class DocumentResponsePre(Model):
