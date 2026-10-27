@@ -52,6 +52,7 @@ async def test_ask_answers_per_document_with_sources(client, monkeypatch):
     document_id = await add_document(client, headers, "wind.txt", WIND)
 
     async def create(**kwargs):
+        assert kwargs["response_format"]["json_schema"]["strict"] is True
         content = json.dumps(
             {"answer": "Семь лет.", "quotes": ["семь лет"]},
             ensure_ascii=False,

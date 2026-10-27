@@ -131,8 +131,8 @@ def test_match_quotes_uses_each_chunk_once_and_at_most_three_quotes():
     assert [source["chunk_id"] for source in sources] == [0, 1, 2]
 
 
-def test_parse_llm_response_strips_code_fence():
-    content = '```json\n{"answer": "Да", "quotes": ["x"]}\n```'
+def test_parse_llm_response():
+    content = '{"answer": "Да", "quotes": ["x"]}'
 
     assert parse_llm_response(content) == {"answer": "Да", "quotes": ["x"]}
 

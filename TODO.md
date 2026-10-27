@@ -19,7 +19,7 @@
 - [x] HNSW-индекс на `document_chunks.embedding` (`USING hnsw (embedding vector_cosine_ops)`), сравнить скорость через `EXPLAIN ANALYZE`
 - [x] Гибридный поиск: полнотекстовый поиск Postgres (`tsvector`) + векторный, объединение через Reciprocal Rank Fusion
 - [x] Эксперименты с чанкингом: `chunk_size`/`overlap` в `services/chunking.py`, сохранять номер страницы, чтобы показывать его в источниках (подбор значений — в пункте про оценку качества)
-- [ ] Structured output (`response_format` с JSON-схемой) вместо ручного срезания ```` ```json ```` в `services/ask.py`
+- [x] Structured output (`response_format` с JSON-схемой) вместо ручного срезания ```` ```json ```` в `services/ask.py`
 - [ ] Отправлять эмбеддинги пачками: сейчас весь документ уходит одним запросом и большой файл может упереться в лимиты провайдера
 - [ ] Оценка качества: набор из ~20 вопросов с известными ответами и скрипт, который проверяет, есть ли нужный чанк в top-k
 

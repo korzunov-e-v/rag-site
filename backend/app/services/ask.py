@@ -12,6 +12,30 @@ from backend.app.settings import settings
 
 logger = logging.getLogger(__name__)
 
+ANSWER_SCHEMA = {
+    "type": "json_schema",
+    "json_schema": {
+        "name": "document_answer",
+        "strict": True,
+        "schema": {
+            "type": "object",
+            "properties": {
+                "answer": {
+                    "type": "string",
+                    "description": "Ответ пользователю на русском языке",
+                },
+                "quotes": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "1-3 дословные цитаты из контекста",
+                },
+            },
+            "required": ["answer", "quotes"],
+            "additionalProperties": False,
+        },
+    },
+}
+
 
 async def ask_documents(
     query: str,
@@ -83,6 +107,7 @@ async def generate_document_answer(
                 "content": query,
             },
         ],
+        response_format=ANSWER_SCHEMA,
     )
 
     response_data = parse_llm_response(
@@ -110,15 +135,7 @@ def parse_llm_response(content: str | None) -> dict:
 
     logger.debug("LLM response: %s", content)
 
-    content = content.strip()
-
-    if content.startswith("```json"):
-        content = content[7:]
-
-    if content.endswith("```"):
-        content = content[:-3]
-
-    return json.loads(content.strip())
+    return json.loads(content)
 
 
 def match_quotes(
@@ -165,7 +182,7 @@ async def process_document(
             document_chunks,
         )
 
-    except Exception as exc:
+    except Exception:
         logger.exception(
             "Failed to answer from document id=%s",
             document_id,
@@ -174,5 +191,5 @@ async def process_document(
         return {
             "document_id": document_id,
             "filename": document_chunks[0][0].document.filename,
-            "error": str(exc),
+            "error": "Не удалось получить ответ по документу",
         }
