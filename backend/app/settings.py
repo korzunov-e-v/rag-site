@@ -19,6 +19,7 @@ class Settings(BaseSettings):
 
     chunk_size: int = 500
     chunk_overlap: int = 50
+    embedding_batch_size: int = 100
 
     s3_endpoint_url: str = "http://minio:9000"
     s3_access_key: str = "minio"

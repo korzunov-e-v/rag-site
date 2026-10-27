@@ -4,6 +4,7 @@ import pytest
 from sqlalchemy import func, select
 
 from backend.app.db.enums import DocumentStatus
+from backend.app.db.connect import SessionLocal
 from backend.app.db.models import Document, DocumentChunk
 from backend.app.exceptions import RetryableError
 from backend.app.tasks.documents import run_process_document
@@ -143,3 +144,20 @@ async def test_processing_retryable_error_keeps_processing_until_last_retry(
     await db.refresh(document)
     assert document.status == DocumentStatus.FAILED
     assert emitted[-1][1] == "failed"
+
+
+async def test_processing_document_deleted_midway_finishes_quietly(client, emitted, monkeypatch):
+    headers = await auth_headers(client)
+    document_id = (await upload(client, headers)).json()["id"]
+
+    async def delete_then_embed(values):
+        async with SessionLocal() as other:
+            await other.delete(await other.get(Document, document_id))
+            await other.commit()
+        return [[0.1] * 1536 for _ in values]
+
+    monkeypatch.setattr("backend.app.services.process_doc.create_embeddings", delete_then_embed)
+
+    await run_process_document(FakeTask(), document_id)
+
+    assert [status for _, status, _ in emitted] == ["processing"]

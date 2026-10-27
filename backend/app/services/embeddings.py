@@ -32,16 +32,27 @@ async def create_embedding(text: str) -> list[float]:
 
 
 async def create_embeddings(texts: list[str]) -> list[list[float]]:
-    try:
-        response = await client.embeddings.create(
-            model=settings.openrouter_embedding_model,
-            input=texts,
-        )
-    except Exception as error:
-        if _is_retryable(error):
-            raise RetryableError(
-                "Embedding provider temporarily unavailable"
-            ) from error
-        raise
+    # Большой документ одним запросом упирается в лимиты провайдера
+    # на число входов и токенов, поэтому отправляем пачками.
+    embeddings = []
+    batch_size = settings.embedding_batch_size
 
-    return [result.embedding for result in response.data]
+    for start in range(0, len(texts), batch_size):
+        batch = texts[start:start + batch_size]
+
+        try:
+            response = await client.embeddings.create(
+                model=settings.openrouter_embedding_model,
+                input=batch,
+            )
+        except Exception as error:
+            if _is_retryable(error):
+                raise RetryableError(
+                    "Embedding provider temporarily unavailable"
+                ) from error
+            raise
+
+        data = sorted(response.data, key=lambda result: result.index)
+        embeddings.extend(result.embedding for result in data)
+
+    return embeddings

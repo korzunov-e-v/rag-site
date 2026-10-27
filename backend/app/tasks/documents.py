@@ -1,6 +1,8 @@
 import asyncio
+import logging
 
 from celery import Task
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.celery_app import celery_app
@@ -10,6 +12,8 @@ from backend.app.db.models import Document
 from backend.app.exceptions import RetryableError
 from backend.app.services.process_doc import process_doc
 from backend.app.socketio_publisher import emit_document_status
+
+logger = logging.getLogger(__name__)
 
 
 async def set_status(
@@ -23,6 +27,12 @@ async def set_status(
     await db.commit()
 
     emit_document_status(document.id, status.value, document.owner_id)
+
+
+async def document_exists(db: AsyncSession, document_id: int) -> bool:
+    return await db.scalar(
+        select(Document.id).where(Document.id == document_id)
+    ) is not None
 
 
 async def run_process_document(
@@ -60,6 +70,12 @@ async def run_process_document(
 
         except Exception as error:
             await db.rollback()
+
+            if not await document_exists(db, document_id):
+                # Пользователь удалил документ, пока тот обрабатывался.
+                logger.info("Document %s was deleted during processing", document_id)
+                return
+
             await set_status(db, document, DocumentStatus.FAILED, str(error))
             raise
 
