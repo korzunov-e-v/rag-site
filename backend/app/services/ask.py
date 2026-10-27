@@ -3,6 +3,8 @@ import json
 import logging
 from collections import defaultdict
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from backend.app.llm.openrouter import client
 from backend.app.services.embeddings import create_embedding
 from backend.app.services.retrieval import search_chunks
@@ -13,12 +15,12 @@ logger = logging.getLogger(__name__)
 
 async def ask_documents(
     query: str,
-    db,
+    db: AsyncSession,
     user_id: int,
 ):
     query_embedding = await create_embedding(query)
 
-    chunks = search_chunks(
+    chunks = await search_chunks(
         query_embedding=query_embedding,
         db=db,
         user_id=user_id,

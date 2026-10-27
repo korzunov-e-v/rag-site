@@ -48,29 +48,28 @@ async def ask(sid, data):
         to=sid,
     )
 
-    db = SessionLocal()
-
     try:
-        async for result in ask_documents(query, db, user_id):
+        async with SessionLocal() as db:
+            async for result in ask_documents(query, db, user_id):
 
-            if "error" in result:
+                if "error" in result:
+                    await sio.emit(
+                        "document:error",
+                        {
+                            "document_id": result["document_id"],
+                            "filename": result["filename"],
+                            "message": "Не удалось обработать документ",
+                        },
+                        to=sid,
+                    )
+
+                    continue
+
                 await sio.emit(
-                    "document:error",
-                    {
-                        "document_id": result["document_id"],
-                        "filename": result["filename"],
-                        "message": "Не удалось обработать документ",
-                    },
+                    "answer",
+                    result,
                     to=sid,
                 )
-
-                continue
-
-            await sio.emit(
-                "answer",
-                result,
-                to=sid,
-            )
 
         await sio.emit(
             "ask:finished",
@@ -88,9 +87,6 @@ async def ask(sid, data):
             },
             to=sid,
         )
-
-    finally:
-        db.close()
 
 
 @sio.event
@@ -115,21 +111,17 @@ async def connect(sid, environ, auth):
     except (jwt.PyJWTError, KeyError, TypeError, ValueError):
         return False
 
-    db = SessionLocal()
+    async with SessionLocal() as db:
+        user = await db.get(User, user_id)
 
-    try:
-        user = db.get(User, user_id)
+    if user is None:
+        return False
 
-        if user is None:
-            return False
+    connected_users[sid] = user.id
+    await sio.enter_room(sid, user_room(user.id))
 
-        connected_users[sid] = user.id
-        await sio.enter_room(sid, user_room(user.id))
+    logger.info("Socket connected: sid=%s user=%s", sid, user.id)
 
-        logger.info("Socket connected: sid=%s user=%s", sid, user.id)
-
-    finally:
-        db.close()
 
 @sio.event
 async def disconnect(sid):

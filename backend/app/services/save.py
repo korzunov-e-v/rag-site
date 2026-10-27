@@ -1,8 +1,8 @@
-import shutil
 from pathlib import Path
 
 from fastapi import UploadFile, HTTPException
-from sqlalchemy.orm import Session
+from fastapi.concurrency import run_in_threadpool
+from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
 
 from backend.app.db.models import Document, User
@@ -51,7 +51,7 @@ def validate_document(document: UploadFile) -> None:
         )
 
 
-def save_document(document: UploadFile, current_user: User, db: Session) -> Document:
+async def save_document(document: UploadFile, current_user: User, db: AsyncSession) -> Document:
     filename = document.filename
     validate_document(document)
 
@@ -64,30 +64,31 @@ def save_document(document: UploadFile, current_user: User, db: Session) -> Docu
             storage_key="",
         )
         db.add(db_document)
-        db.flush()
+        await db.flush()
 
         storage_key = f"documents/{db_document.id}/{filename}"
 
-        s3_storage.upload(
+        await run_in_threadpool(
+            s3_storage.upload,
             document.file,
             storage_key,
         )
 
         db_document.storage_key = storage_key
 
-        db.commit()
-        db.refresh(db_document)
+        await db.commit()
+        await db.refresh(db_document)
 
         return db_document
 
     except HTTPException:
-        db.rollback()
+        await db.rollback()
         raise
 
     except Exception as error:
-        db.rollback()
+        await db.rollback()
         if "storage_key" in locals():
-            s3_storage.delete(storage_key)
+            await run_in_threadpool(s3_storage.delete, storage_key)
         logger.exception("Failed to upload document")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

@@ -1,6 +1,8 @@
 import jwt
+from fastapi.concurrency import run_in_threadpool
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.api.dependencies import get_current_user
 from backend.app.auth.password import hash_password, verify_password
@@ -26,14 +28,12 @@ router = APIRouter(
     response_model=TokenResponse,
     status_code=status.HTTP_201_CREATED,
 )
-def register(
+async def register(
     data: RegisterRequest,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
-    existing_user = (
-        db.query(User)
-        .filter(User.email == data.email)
-        .first()
+    existing_user = await db.scalar(
+        select(User).where(User.email == data.email)
     )
 
     if existing_user:
@@ -44,12 +44,12 @@ def register(
 
     user = User(
         email=data.email,
-        password_hash=hash_password(data.password),
+        password_hash=await run_in_threadpool(hash_password, data.password),
     )
 
     db.add(user)
-    db.commit()
-    db.refresh(user)
+    await db.commit()
+    await db.refresh(user)
 
     access_token = create_access_token(user.id)
     refresh_token = create_refresh_token(user.id)
@@ -71,17 +71,16 @@ def register(
     "/login",
     response_model=TokenResponse,
 )
-def login(
+async def login(
     data: LoginRequest,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
-    user = (
-        db.query(User)
-        .filter(User.email == data.email)
-        .first()
+    user = await db.scalar(
+        select(User).where(User.email == data.email)
     )
 
-    if user is None or not verify_password(
+    if user is None or not await run_in_threadpool(
+        verify_password,
         data.password,
         user.password_hash,
     ):
@@ -109,7 +108,7 @@ def login(
     "/me",
     response_model=UserResponse,
 )
-def me(
+async def me(
     current_user: User = Depends(get_current_user),
 ):
     return UserResponse(
@@ -120,9 +119,9 @@ def me(
     )
 
 @router.post("/refresh", response_model=TokenResponse)
-def refresh(
+async def refresh(
     data: RefreshRequest,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     refresh_token = data.refresh_token
     try:
@@ -151,7 +150,7 @@ def refresh(
             detail="Недействительный refresh token",
         )
 
-    user = db.get(User, user_id)
+    user = await db.get(User, user_id)
 
     if user is None:
         raise HTTPException(

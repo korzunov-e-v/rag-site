@@ -1,7 +1,9 @@
+import asyncio
 import tempfile
 from pathlib import Path
 
-from sqlalchemy.orm import Session
+from sqlalchemy import delete
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.db.models import Document, DocumentChunk
 from backend.app.services.chunking import split_text
@@ -12,18 +14,20 @@ from backend.app.services.storage import s3_storage
 
 async def process_doc(
     document: Document,
-    db: Session,
+    db: AsyncSession,
 ) -> None:
     with tempfile.NamedTemporaryFile() as temp_file:
-        file = s3_storage.download(
-            document.storage_key
+        file = await asyncio.to_thread(
+            s3_storage.download,
+            document.storage_key,
         )
 
         temp_file.write(file.read())
         temp_file.flush()
 
-        text = get_text(
-            Path(temp_file.name)
+        text = await asyncio.to_thread(
+            get_text,
+            Path(temp_file.name),
         )
 
     if not text:
@@ -40,10 +44,10 @@ async def process_doc(
 
     embeddings = await create_embeddings(chunks)
 
-    db.query(DocumentChunk).filter(
-        DocumentChunk.document_id == document.id
-    ).delete(
-        synchronize_session=False
+    await db.execute(
+        delete(DocumentChunk).where(
+            DocumentChunk.document_id == document.id
+        )
     )
 
     for chunk_index, (chunk, embedding) in enumerate(

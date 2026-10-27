@@ -1,13 +1,14 @@
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
 
 from backend.app.db.models import DocumentChunk, Document
 from backend.app.settings import settings
 
 
-def search_chunks(
+async def search_chunks(
     query_embedding: list[float],
-    db: Session,
+    db: AsyncSession,
     user_id: int,
     limit: int = 5,
 ) -> list[DocumentChunk]:
@@ -16,10 +17,12 @@ def search_chunks(
     statement = (
         select(DocumentChunk, distance)
         .join(Document)
+        .options(joinedload(DocumentChunk.document))
         .where(Document.owner_id == user_id)
         .where(distance < settings.max_distance)
         .order_by(distance)
         .limit(limit)
     )
 
-    return db.execute(statement).all()
+    result = await db.execute(statement)
+    return result.all()

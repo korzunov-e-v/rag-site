@@ -1,7 +1,7 @@
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 import jwt
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.db.connect import get_db
 from backend.app.db.models import User
@@ -11,9 +11,9 @@ from backend.app.settings import settings
 security = HTTPBearer()
 
 
-def get_current_user(
+async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ) -> User:
     token = credentials.credentials
 
@@ -46,7 +46,7 @@ def get_current_user(
             detail="Недействительный токен",
         )
 
-    user = db.get(User, user_id)
+    user = await db.get(User, user_id)
 
     if user is None:
         raise HTTPException(

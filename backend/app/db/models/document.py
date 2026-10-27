@@ -29,6 +29,7 @@ class Document(Base):
     chunks: Mapped[list["DocumentChunk"]] = relationship(
         back_populates="document",
         cascade="all, delete-orphan",
+        passive_deletes=True,
     )
     error_message: Mapped[str | None] = mapped_column(
         Text,

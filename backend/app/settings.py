@@ -24,6 +24,11 @@ class Settings(BaseSettings):
 
     redis_url: str = "redis://redis:6379/0"
 
+    @property
+    def async_database_url(self) -> str:
+        # Alembic работает через синхронный psycopg2, приложение — через asyncpg.
+        return self.database_url.replace("+psycopg2", "+asyncpg")
+
     jwt_secret_key: SecretStr
     jwt_algorithm: str = "HS256"
     jwt_access_token_expire_minutes: int = 30
