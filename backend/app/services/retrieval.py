@@ -17,6 +17,7 @@ def search_chunks(
         select(DocumentChunk, distance)
         .join(Document)
         .where(Document.owner_id == user_id)
+        .where(distance < settings.max_distance)
         .order_by(distance)
         .limit(limit)
     )
