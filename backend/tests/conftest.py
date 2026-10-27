@@ -61,7 +61,7 @@ async def clean_database():
     yield
 
     async with engine.begin() as connection:
-        await connection.execute(text("TRUNCATE users, documents, document_chunks RESTART IDENTITY CASCADE"))
+        await connection.execute(text("TRUNCATE users, documents, document_chunks, conversations, messages RESTART IDENTITY CASCADE"))
 
     # Каждый тест идёт в своём event loop, а соединения пула привязаны к loop.
     await engine.dispose()

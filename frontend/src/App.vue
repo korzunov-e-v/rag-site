@@ -2,7 +2,7 @@
 import { onMounted, onUnmounted, ref } from 'vue'
 import DocumentSidebar from './components/DocumentSidebar.vue'
 import Login from './components/Login.vue'
-import Search from './components/Search.vue'
+import Chat from './components/Chat.vue'
 import {
   clearAuth,
   getToken,
@@ -120,7 +120,7 @@ onUnmounted(() => {
         </div>
       </header>
 
-      <Search />
+      <Chat />
     </main>
   </div>
 </template>

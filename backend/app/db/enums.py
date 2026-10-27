@@ -11,3 +11,15 @@ class DocumentStatus(str, Enum):
 class UserRole(str, Enum):
     USER = "user"
     ADMIN = "admin"
+
+
+class MessageRole(str, Enum):
+    USER = "user"
+    ASSISTANT = "assistant"
+
+
+class MessageKind(str, Enum):
+    QUESTION = "question"
+    ANSWERS = "answers"
+    CLARIFICATION = "clarification"
+    REPLY = "reply"

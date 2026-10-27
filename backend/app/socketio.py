@@ -6,7 +6,7 @@ import jwt
 from backend.app.db.models import User
 from backend.app.db.connect import SessionLocal
 from backend.app.settings import settings
-from backend.app.services.ask import ask_documents
+from backend.app.services.chat import handle_ask
 from backend.app.socketio_publisher import user_room
 
 logger = logging.getLogger(__name__)
@@ -39,43 +39,16 @@ async def ask(sid, data):
         return
 
     query = data["query"]
+    conversation_id = data.get("conversation_id")
 
     logger.info("Ask: sid=%s user=%s query=%r", sid, user_id, query)
 
-    await sio.emit(
-        "ask:started",
-        {},
-        to=sid,
-    )
+    async def emit(event: str, payload: dict) -> None:
+        await sio.emit(event, payload, to=sid)
 
     try:
         async with SessionLocal() as db:
-            async for result in ask_documents(query, db, user_id):
-
-                if "error" in result:
-                    await sio.emit(
-                        "document:error",
-                        {
-                            "document_id": result["document_id"],
-                            "filename": result["filename"],
-                            "message": "Не удалось обработать документ",
-                        },
-                        to=sid,
-                    )
-
-                    continue
-
-                await sio.emit(
-                    "answer",
-                    result,
-                    to=sid,
-                )
-
-        await sio.emit(
-            "ask:finished",
-            {},
-            to=sid,
-        )
+            await handle_ask(db, user_id, query, conversation_id, emit)
 
     except Exception:
         logger.exception("Ask failed: sid=%s", sid)
