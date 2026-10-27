@@ -84,28 +84,46 @@ async def generate_document_answer(
         ],
     )
 
-    response_content = response.choices[0].message.content
-
-    if not response_content:
-        raise ValueError("LLM returned empty response")
-
-    logger.debug("LLM response: %s", response_content)
-
-    response_content = response_content.strip()
-
-    if response_content.startswith("```json"):
-        response_content = response_content[7:]
-
-    if response_content.endswith("```"):
-        response_content = response_content[:-3]
-
-    response_content = response_content.strip()
-
-    response_data = json.loads(response_content)
+    response_data = parse_llm_response(
+        response.choices[0].message.content
+    )
 
     answer = response_data["answer"]
-    quotes = response_data.get("quotes", [])
+    sources = match_quotes(
+        response_data.get("quotes", []),
+        document_chunks,
+    )
 
+    return {
+        "document_id": document.id,
+        "filename": document.filename,
+        "distance": distance,
+        "answer": answer,
+        "sources": sources,
+    }
+
+
+def parse_llm_response(content: str | None) -> dict:
+    if not content:
+        raise ValueError("LLM returned empty response")
+
+    logger.debug("LLM response: %s", content)
+
+    content = content.strip()
+
+    if content.startswith("```json"):
+        content = content[7:]
+
+    if content.endswith("```"):
+        content = content[:-3]
+
+    return json.loads(content.strip())
+
+
+def match_quotes(
+    quotes: list[str],
+    document_chunks: list,
+) -> list[dict]:
     sources = []
     used_texts = set()
 
@@ -131,13 +149,7 @@ async def generate_document_answer(
         key=lambda source: source["distance"]
     )
 
-    return {
-        "document_id": document.id,
-        "filename": document.filename,
-        "distance": distance,
-        "answer": answer,
-        "sources": sources,
-    }
+    return sources
 
 
 async def process_document(

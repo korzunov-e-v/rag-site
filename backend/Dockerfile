@@ -8,6 +8,7 @@ RUN apt-get update \
 COPY pyproject.toml uv.lock ./
 
 RUN pip install uv \
-    && uv sync --frozen --no-dev
+    && uv sync --frozen
 
-COPY . .
+COPY alembic.ini ./
+COPY . ./backend

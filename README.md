@@ -135,6 +135,14 @@ docker compose build frontend
 docker compose up -d frontend
 ```
 
+## Тесты
+
+```bash
+docker compose exec app uv run pytest
+```
+
+Тесты работают с отдельной базой `rag_test` (создаётся автоматически, на неё накатываются миграции) и не трогают данные разработки. OpenRouter, S3 и Redis в тестах заменены фейками, поэтому ключ API не расходуется.
+
 ## Структура проекта
 
 ```text
@@ -142,6 +150,7 @@ backend/                 FastAPI-приложение, Celery и миграци�
   app/api/               REST API
   app/services/          бизнес-логика, RAG и хранилище
   app/tasks/             фоновые задачи Celery
+  tests/                 тесты pytest
 frontend/                Vue-приложение
 docker-compose.yaml      конфигурация локального окружения
 ```

@@ -9,4 +9,8 @@ splitter = SentenceSplitter(
 
 def split_text(text: str) -> list[str]:
     text = " ".join(text.split())
+
+    if not text:
+        return []
+
     return splitter.split_text(text)
