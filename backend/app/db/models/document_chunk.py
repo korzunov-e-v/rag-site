@@ -32,6 +32,7 @@ class DocumentChunk(Base):
     )
     chunk_index: Mapped[int] = mapped_column(nullable=False)
     text: Mapped[str] = mapped_column(Text, nullable=False)
+    page: Mapped[int | None] = mapped_column()
     document: Mapped[Document] = relationship(
         back_populates="chunks",
     )

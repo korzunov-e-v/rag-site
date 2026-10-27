@@ -138,6 +138,7 @@ def match_quotes(
                     {
                         "chunk_id": chunk.id,
                         "text": chunk.text,
+                        "page": chunk.page,
                         "quote": quote,
                         "distance": chunk_distance,
                     }

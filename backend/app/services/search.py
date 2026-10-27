@@ -15,6 +15,7 @@ async def search_documents(
         {
             "id": chunk.id,
             "text": chunk.text,
+            "page": chunk.page,
             "distance": distance,
         }
         for chunk, distance in await search_chunks(

@@ -17,6 +17,9 @@ class Settings(BaseSettings):
 
     max_distance: float
 
+    chunk_size: int = 500
+    chunk_overlap: int = 50
+
     s3_endpoint_url: str = "http://minio:9000"
     s3_access_key: str = "minio"
     s3_secret_key: SecretStr = "minio123"

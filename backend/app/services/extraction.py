@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from pathlib import Path
 
 import magic
@@ -9,29 +10,39 @@ DOCX_MIME_TYPE = (
 )
 
 
-def extract_txt(file_path: Path) -> str:
-    return file_path.read_text(encoding="utf-8-sig")
+@dataclass
+class Section:
+    text: str
+    page: int | None = None
 
 
-def extract_pdf(file_path: Path) -> str:
+def extract_txt(file_path: Path) -> list[Section]:
+    return [Section(file_path.read_text(encoding="utf-8-sig"))]
+
+
+def extract_pdf(file_path: Path) -> list[Section]:
     reader = PdfReader(file_path)
-    return "\n".join(
-        text
-        for page in reader.pages
+    return [
+        Section(text, page=number)
+        for number, page in enumerate(reader.pages, start=1)
         if (text := page.extract_text())
-    )
+    ]
 
 
-def extract_docx(file_path: Path) -> str:
+def extract_docx(file_path: Path) -> list[Section]:
     document = Document(file_path)
-    return "\n".join(
-        paragraph.text
-        for paragraph in document.paragraphs
-        if paragraph.text
-    )
+    return [
+        Section(
+            "\n".join(
+                paragraph.text
+                for paragraph in document.paragraphs
+                if paragraph.text
+            )
+        )
+    ]
 
 
-def get_text(file_path: str | Path) -> str | None:
+def extract_sections(file_path: str | Path) -> list[Section] | None:
     path = Path(file_path)
     mime_type = magic.from_file(str(path), mime=True)
 

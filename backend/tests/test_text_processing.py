@@ -4,8 +4,8 @@ import pytest
 from docx import Document as DocxDocument
 
 from backend.app.services.ask import match_quotes, parse_llm_response
-from backend.app.services.chunking import split_text
-from backend.app.services.extraction import get_text
+from backend.app.services.chunking import Chunk, split_sections, split_text
+from backend.app.services.extraction import Section, extract_sections
 
 
 def test_split_text_normalizes_whitespace():
@@ -26,11 +26,20 @@ def test_split_text_empty():
     assert split_text("   ") == []
 
 
+def test_split_sections_keeps_page_numbers():
+    sections = [Section("Первая страница.", page=1), Section("   ", page=2), Section("Третья.", page=3)]
+
+    assert split_sections(sections) == [
+        Chunk("Первая страница.", page=1),
+        Chunk("Третья.", page=3),
+    ]
+
+
 def test_get_text_txt(tmp_path):
     path = tmp_path / "file.txt"
     path.write_text("Текст файла", encoding="utf-8")
 
-    assert get_text(path) == "Текст файла"
+    assert extract_sections(path) == [Section("Текст файла")]
 
 
 def test_get_text_docx(tmp_path):
@@ -41,34 +50,43 @@ def test_get_text_docx(tmp_path):
     document.add_paragraph("Второй абзац")
     document.save(path)
 
-    assert get_text(path) == "Первый абзац\nВторой абзац"
+    assert extract_sections(path) == [Section("Первый абзац\nВторой абзац")]
 
 
-def test_get_text_pdf(tmp_path):
+def test_get_text_pdf_keeps_page_numbers(tmp_path):
     path = tmp_path / "file.pdf"
-    path.write_bytes(make_pdf("Hello PDF"))
+    path.write_bytes(make_pdf(["First page", "", "Third page"]))
 
-    assert get_text(path) == "Hello PDF"
+    assert extract_sections(path) == [
+        Section("First page", page=1),
+        Section("Third page", page=3),
+    ]
 
 
 def test_get_text_unknown_binary(tmp_path):
     path = tmp_path / "file.bin"
     path.write_bytes(bytes(range(256)) * 4)
 
-    assert get_text(path) is None
+    assert extract_sections(path) is None
 
 
-def make_pdf(text: str) -> bytes:
-    """Минимальный валидный PDF с одной строкой текста."""
-    stream = f"BT /F1 24 Tf 72 720 Td ({text}) Tj ET".encode()
+def make_pdf(pages: list[str]) -> bytes:
+    """Минимальный валидный PDF: по строке текста на страницу (пустая — без текста)."""
+    # 1 — каталог, 2 — список страниц, 3 — шрифт, дальше пары «страница, контент».
+    page_ids = [4 + 2 * index for index in range(len(pages))]
     objects = [
         b"<< /Type /Catalog /Pages 2 0 R >>",
-        b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] "
-        b"/Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>",
-        b"<< /Length %d >>\nstream\n%s\nendstream" % (len(stream), stream),
+        b"<< /Type /Pages /Kids [%s] /Count %d >>"
+        % (b" ".join(b"%d 0 R" % id for id in page_ids), len(pages)),
         b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
     ]
+    for page_id, text in zip(page_ids, pages):
+        stream = f"BT /F1 24 Tf 72 720 Td ({text}) Tj ET".encode() if text else b""
+        objects.append(
+            b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] "
+            b"/Contents %d 0 R /Resources << /Font << /F1 3 0 R >> >> >>" % (page_id + 1)
+        )
+        objects.append(b"<< /Length %d >>\nstream\n%s\nendstream" % (len(stream), stream))
 
     pdf = b"%PDF-1.4\n"
     offsets = []
@@ -87,7 +105,7 @@ def make_pdf(text: str) -> bytes:
 
 
 def chunk(id: int, text: str):
-    return SimpleNamespace(id=id, text=text)
+    return SimpleNamespace(id=id, text=text, page=None)
 
 
 def test_match_quotes_finds_chunks_and_sorts_by_distance():

@@ -1,6 +1,7 @@
 export interface AnswerSource {
   chunk_id: number
   text: string
+  page: number | null
   quote: string
   distance: number
 }

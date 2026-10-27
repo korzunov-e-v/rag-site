@@ -107,6 +107,9 @@ defineProps<{
           <div class="mb-2 flex items-center justify-between">
             <span class="text-xs font-medium text-slate-400">
               Источник {{ index + 1 }}
+              <template v-if="source.page !== null">
+                · стр. {{ source.page }}
+              </template>
             </span>
 
             <span class="text-xs text-slate-400">
