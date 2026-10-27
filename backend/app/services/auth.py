@@ -18,7 +18,7 @@ def create_access_token(user_id: int) -> str:
 
     return jwt.encode(
         payload,
-        settings.jwt_secret_key,
+        settings.jwt_secret_key.get_secret_value(),
         algorithm=settings.jwt_algorithm,
     )
 
@@ -37,6 +37,6 @@ def create_refresh_token(user_id: int) -> str:
 
     return jwt.encode(
         payload,
-        settings.jwt_secret_key,
+        settings.jwt_secret_key.get_secret_value(),
         algorithm=settings.jwt_algorithm,
     )

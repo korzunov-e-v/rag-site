@@ -11,7 +11,7 @@
 ## Уровень 2: инженерная гигиена
 
 - [ ] Тесты (pytest): сначала чистые функции (`chunking.split_text`, `extraction.get_text`, сопоставление цитат в `ask.py`), затем API через `TestClient` с тестовой БД и моками OpenRouter
-- [ ] Заменить `print` на `logging`: логгер уже настроен в `settings.py`
+- [x] Заменить `print` на `logging`: логгер уже настроен в `settings.py`
 - [ ] Перейти на `AsyncSession` + `asyncpg`: сейчас синхронная сессия в async-коде (`ask.py`, `socketio.py`) блокирует event loop
 
 ## Уровень 3: улучшить RAG

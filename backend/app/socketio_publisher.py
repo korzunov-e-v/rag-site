@@ -1,7 +1,10 @@
+import logging
+
 import socketio
 
 from backend.app.settings import settings
 
+logger = logging.getLogger(__name__)
 
 manager = socketio.RedisManager(settings.redis_url)
 
@@ -15,11 +18,11 @@ def emit_document_status(
     status: str,
     owner_id: int,
 ) -> None:
-    print(
-        "REDIS SOCKET EMIT:",
+    logger.info(
+        "Document status: id=%s status=%s owner=%s",
         document_id,
         status,
-        settings.redis_url,
+        owner_id,
     )
     manager.emit(
         "document:status",

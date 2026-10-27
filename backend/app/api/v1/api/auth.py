@@ -128,7 +128,7 @@ def refresh(
     try:
         payload = jwt.decode(
             refresh_token,
-            settings.jwt_secret_key,
+            settings.jwt_secret_key.get_secret_value(),
             algorithms=[settings.jwt_algorithm],
         )
 

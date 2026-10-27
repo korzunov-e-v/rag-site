@@ -1,11 +1,14 @@
 import asyncio
 import json
+import logging
 from collections import defaultdict
 
 from backend.app.llm.openrouter import client
 from backend.app.services.embeddings import create_embedding
 from backend.app.services.retrieval import search_chunks
 from backend.app.settings import settings
+
+logger = logging.getLogger(__name__)
 
 
 async def ask_documents(
@@ -84,8 +87,7 @@ async def generate_document_answer(
     if not response_content:
         raise ValueError("LLM returned empty response")
 
-    print("LLM RESPONSE:")
-    print(response_content)
+    logger.debug("LLM response: %s", response_content)
 
     response_content = response_content.strip()
 
@@ -148,10 +150,9 @@ async def process_document(
         )
 
     except Exception as exc:
-        print(
-            f"DOCUMENT ERROR: "
-            f"id={document_id} "
-            f"error={exc}"
+        logger.exception(
+            "Failed to answer from document id=%s",
+            document_id,
         )
 
         return {

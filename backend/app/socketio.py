@@ -1,3 +1,5 @@
+import logging
+
 import socketio
 import jwt
 
@@ -6,6 +8,8 @@ from backend.app.db.connect import SessionLocal
 from backend.app.settings import settings
 from backend.app.services.ask import ask_documents
 from backend.app.socketio_publisher import user_room
+
+logger = logging.getLogger(__name__)
 
 connected_users: dict[str, int] = {}
 
@@ -36,11 +40,7 @@ async def ask(sid, data):
 
     query = data["query"]
 
-    print(
-        f"SOCKET.IO ASK: "
-        f"sid={sid} "
-        f"query={query!r}"
-    )
+    logger.info("Ask: sid=%s user=%s query=%r", sid, user_id, query)
 
     await sio.emit(
         "ask:started",
@@ -54,13 +54,6 @@ async def ask(sid, data):
         async for result in ask_documents(query, db, user_id):
 
             if "error" in result:
-                print(
-                    f"DOCUMENT ERROR: "
-                    f"id={result['document_id']} "
-                    f"filename={result['filename']} "
-                    f"error={result['error']}"
-                )
-
                 await sio.emit(
                     "document:error",
                     {
@@ -73,19 +66,11 @@ async def ask(sid, data):
 
                 continue
 
-            print(
-                f"SOCKET.IO ANSWER: "
-                f"document_id={result['document_id']} "
-                f"filename={result['filename']}"
-            )
-
             await sio.emit(
                 "answer",
                 result,
                 to=sid,
             )
-
-        print("SOCKET.IO EMIT: ask:finished")
 
         await sio.emit(
             "ask:finished",
@@ -93,8 +78,8 @@ async def ask(sid, data):
             to=sid,
         )
 
-    except Exception as exc:
-        print(f"ASK ERROR: {exc}")
+    except Exception:
+        logger.exception("Ask failed: sid=%s", sid)
 
         await sio.emit(
             "ask:error",
@@ -110,10 +95,6 @@ async def ask(sid, data):
 
 @sio.event
 async def connect(sid, environ, auth):
-    print(
-        "SOCKET.IO CONNECT:",
-        sid,
-    )
     if not auth:
         return False
 
@@ -125,7 +106,7 @@ async def connect(sid, environ, auth):
     try:
         payload = jwt.decode(
             token,
-            settings.jwt_secret_key,
+            settings.jwt_secret_key.get_secret_value(),
             algorithms=[settings.jwt_algorithm],
         )
 
@@ -145,11 +126,7 @@ async def connect(sid, environ, auth):
         connected_users[sid] = user.id
         await sio.enter_room(sid, user_room(user.id))
 
-        print(
-            f"SOCKET.IO AUTH: "
-            f"sid={sid} "
-            f"user_id={user.id}"
-        )
+        logger.info("Socket connected: sid=%s user=%s", sid, user.id)
 
     finally:
         db.close()
