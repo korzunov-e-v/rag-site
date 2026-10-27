@@ -1,6 +1,7 @@
 import asyncio
 
 from celery import Task
+from sqlalchemy.orm import Session
 
 from backend.app.celery_app import celery_app
 from backend.app.db.connect import SessionLocal
@@ -8,6 +9,20 @@ from backend.app.db.enums import DocumentStatus
 from backend.app.db.models import Document
 from backend.app.exceptions import RetryableError
 from backend.app.services.process_doc import process_doc
+from backend.app.socketio_publisher import emit_document_status
+
+
+def set_status(
+    db: Session,
+    document: Document,
+    status: DocumentStatus,
+    error_message: str | None = None,
+) -> None:
+    document.status = status
+    document.error_message = error_message
+    db.commit()
+
+    emit_document_status(document.id, status.value)
 
 
 @celery_app.task(
@@ -24,29 +39,23 @@ def process_document(
         if document is None:
             return
 
-        document.status = DocumentStatus.PROCESSING
-        document.error_message = None
-        db.commit()
+        set_status(db, document, DocumentStatus.PROCESSING)
 
         try:
             asyncio.run(process_doc(document, db))
-
-            document.status = DocumentStatus.PROCESSED
-            document.error_message = None
-            db.commit()
+            set_status(db, document, DocumentStatus.PROCESSED)
 
         except RetryableError as error:
             db.rollback()
 
-            document = db.get(Document, document_id)
-            document.status = DocumentStatus.PROCESSING
+            if self.request.retries >= self.max_retries:
+                set_status(db, document, DocumentStatus.FAILED, str(error))
+                raise
+
+            # Документ остаётся в обработке: пользователь не увидит
+            # ошибку, пока ретраи не закончатся.
             document.error_message = str(error)
             db.commit()
-
-            if self.request.retries >= self.max_retries:
-                document.status = DocumentStatus.FAILED
-                db.commit()
-                raise
 
             raise self.retry(
                 exc=error,
@@ -55,10 +64,5 @@ def process_document(
 
         except Exception as error:
             db.rollback()
-
-            document = db.get(Document, document_id)
-            document.status = DocumentStatus.FAILED
-            document.error_message = str(error)
-            db.commit()
-
+            set_status(db, document, DocumentStatus.FAILED, str(error))
             raise
