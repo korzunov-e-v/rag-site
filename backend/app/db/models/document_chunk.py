@@ -1,4 +1,5 @@
-from sqlalchemy import ForeignKey, Index, Text
+from sqlalchemy import Computed, ForeignKey, Index, Text
+from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from pgvector.sqlalchemy import Vector
 
@@ -16,6 +17,11 @@ class DocumentChunk(Base):
             postgresql_using="hnsw",
             postgresql_ops={"embedding": "vector_cosine_ops"},
         ),
+        Index(
+            "ix_document_chunks_search_vector",
+            "search_vector",
+            postgresql_using="gin",
+        ),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -31,4 +37,8 @@ class DocumentChunk(Base):
     )
     embedding: Mapped[list[float] | None] = mapped_column(
         Vector(settings.openrouter_embedding_model_dimensions)
+    )
+    search_vector: Mapped[str | None] = mapped_column(
+        TSVECTOR,
+        Computed("to_tsvector('russian', text)", persisted=True),
     )

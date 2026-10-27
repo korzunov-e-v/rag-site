@@ -21,6 +21,7 @@ async def ask_documents(
     query_embedding = await create_embedding(query)
 
     chunks = await search_chunks(
+        query=query,
         query_embedding=query_embedding,
         db=db,
         user_id=user_id,

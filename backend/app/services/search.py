@@ -18,6 +18,7 @@ async def search_documents(
             "distance": distance,
         }
         for chunk, distance in await search_chunks(
+            query=query,
             query_embedding=query_embedding,
             db=db,
             user_id=user_id,
