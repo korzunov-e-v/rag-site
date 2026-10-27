@@ -2,8 +2,13 @@ import hashlib
 import math
 import os
 import re
+import sys
 from io import BytesIO
 from pathlib import Path
+
+# Корень, из которого импортируется пакет backend (/app в контейнере).
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(PROJECT_ROOT))
 
 # Тесты работают с отдельной базой, чтобы не трогать данные разработки.
 # Переменную нужно выставить до импорта приложения: settings читаются при импорте.
@@ -47,7 +52,7 @@ def _create_test_database() -> None:
 def database():
     _create_test_database()
 
-    alembic_ini = Path(__file__).resolve().parents[2] / "alembic.ini"
+    alembic_ini = PROJECT_ROOT / "alembic.ini"
     command.upgrade(Config(str(alembic_ini)), "head")
 
 
