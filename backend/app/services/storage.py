@@ -17,6 +17,15 @@ class S3Storage:
             aws_secret_access_key=settings.s3_secret_key.get_secret_value(),
         )
 
+    def ensure_bucket(self) -> None:
+        try:
+            self.client.head_bucket(Bucket=settings.s3_bucket)
+        except ClientError as error:
+            if error.response["Error"]["Code"] not in ("404", "NoSuchBucket"):
+                raise
+
+            self.client.create_bucket(Bucket=settings.s3_bucket)
+
     def upload(self, file, key: str) -> None:
         self.client.upload_fileobj(
             file,
