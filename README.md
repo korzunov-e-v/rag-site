@@ -109,6 +109,7 @@ docker compose down -v
 | `POST` | `/documents/url` | Импорт документа по ссылке |
 | `GET` | `/documents` | Список документов пользователя |
 | `GET`, `DELETE` | `/documents/{document_id}` | Просмотр или удаление документа |
+| `PATCH` | `/documents/{document_id}` | Сделать документ общим или личным (только админ) |
 | `POST` | `/search` | Поиск по документам |
 | `POST` | `/ask` | Вопрос к документам (RAG) |
 
@@ -137,6 +138,15 @@ docker compose build frontend
 
 # Перезапустить только фронтенд
 docker compose up -d frontend
+```
+
+## Роли и общие документы
+
+Администратор может сделать свой документ общим: его видят и используют в поиске все пользователи, но удалить или изменить его может только владелец. Назначить администратора:
+
+```bash
+docker compose exec app uv run python -m backend.app.cli make-admin user@example.com
+docker compose exec app uv run python -m backend.app.cli remove-admin user@example.com
 ```
 
 ## Тесты

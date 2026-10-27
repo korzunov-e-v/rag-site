@@ -1,4 +1,4 @@
-from sqlalchemy import Text, cast, func, select
+from sqlalchemy import Text, cast, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
@@ -35,7 +35,7 @@ async def vector_search(
         select(DocumentChunk, distance)
         .join(Document)
         .options(joinedload(DocumentChunk.document))
-        .where(Document.owner_id == user_id)
+        .where(or_(Document.owner_id == user_id, Document.is_shared))
         .where(distance < settings.max_distance)
         .order_by(distance)
         .limit(limit)
@@ -59,7 +59,7 @@ async def text_search(
         select(DocumentChunk, distance)
         .join(Document)
         .options(joinedload(DocumentChunk.document))
-        .where(Document.owner_id == user_id)
+        .where(or_(Document.owner_id == user_id, Document.is_shared))
         .where(DocumentChunk.search_vector.op("@@")(ts_query))
         .order_by(func.ts_rank_cd(DocumentChunk.search_vector, ts_query).desc())
         .limit(limit)

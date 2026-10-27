@@ -3,10 +3,12 @@ import { onMounted, ref } from 'vue'
 import {
   deleteDocument,
   getDocuments,
+  setDocumentShared,
   uploadDocument,
   uploadDocumentFromUrl,
 } from '../api/documents'
 import type { Document } from '../types/document'
+import { getUser } from '../services/auth'
 import {
   useDocumentStatus,
   useDocumentUpdated,
@@ -19,6 +21,25 @@ const loading = ref(true)
 const uploading = ref(false)
 const error = ref<string | null>(null)
 const url = ref('')
+
+const user = getUser()
+const isAdmin = user?.role === 'admin'
+
+function isOwn(document: Document): boolean {
+  return document.owner_id === user?.id
+}
+
+async function toggleShared(document: Document) {
+  try {
+    error.value = null
+    const updated = await setDocumentShared(document.id, !document.is_shared)
+    document.is_shared = updated.is_shared
+  } catch (err) {
+    error.value = err instanceof Error
+      ? err.message
+      : 'Не удалось изменить доступ к документу'
+  }
+}
 
 const ACCEPTED_FILES = '.pdf,.txt,.md,.docx,.html,.htm,.png,.jpg,.jpeg'
 
@@ -238,12 +259,25 @@ onMounted(loadDocuments)
       >
         <div class="flex items-start justify-between gap-2">
           <div class="min-w-0">
-            <p
-              class="truncate text-sm font-medium text-slate-900"
-              :title="document.filename"
-            >
-              {{ document.filename }}
-            </p>
+            <div class="flex items-center gap-1.5">
+              <p
+                class="truncate text-sm font-medium text-slate-900"
+                :title="document.filename"
+              >
+                {{ document.filename }}
+              </p>
+
+              <span
+                v-if="document.is_shared"
+                class="shrink-0 rounded bg-purple-50 px-1.5 py-0.5
+                       text-[10px] font-medium text-purple-700"
+                :title="isOwn(document)
+                  ? 'Документ доступен всем пользователям'
+                  : 'Общий документ, только для чтения'"
+              >
+                Общий
+              </span>
+            </div>
 
             <p class="mt-1 text-xs text-slate-500">
               {{ formatSize(document.size) }}
@@ -260,15 +294,29 @@ onMounted(loadDocuments)
             </p>
           </div>
 
-          <button
-            type="button"
-            class="shrink-0 text-xs text-slate-400 opacity-0 transition
-                   hover:text-red-500 group-hover:opacity-100"
-            title="Удалить"
-            @click="handleDelete(document)"
+          <div
+            v-if="isOwn(document)"
+            class="flex shrink-0 flex-col items-end gap-1 opacity-0
+                   transition group-hover:opacity-100"
           >
-            Удалить
-          </button>
+            <button
+              v-if="isAdmin"
+              type="button"
+              class="text-xs text-slate-400 hover:text-purple-600"
+              @click="toggleShared(document)"
+            >
+              {{ document.is_shared ? 'Сделать личным' : 'Сделать общим' }}
+            </button>
+
+            <button
+              type="button"
+              class="text-xs text-slate-400 hover:text-red-500"
+              title="Удалить"
+              @click="handleDelete(document)"
+            >
+              Удалить
+            </button>
+          </div>
         </div>
       </div>
     </div>

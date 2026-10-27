@@ -64,6 +64,27 @@ export async function uploadDocumentFromUrl(url: string): Promise<Document> {
   return response.json()
 }
 
+export async function setDocumentShared(
+  id: number,
+  isShared: boolean,
+): Promise<Document> {
+  const response = await apiFetch(`/api/v1/documents/${id}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ is_shared: isShared }),
+  })
+
+  if (!response.ok) {
+    throw new Error(
+      await errorMessage(response, 'Не удалось изменить доступ к документу'),
+    )
+  }
+
+  return response.json()
+}
+
 export async function deleteDocument(id: number): Promise<void> {
   const response = await apiFetch(`/api/v1/documents/${id}`, {
     method: 'DELETE',

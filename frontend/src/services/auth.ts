@@ -64,6 +64,15 @@ export function setAuth(
   )
 }
 
+export function setUser(currentUser: User): void {
+  user = currentUser
+
+  localStorage.setItem(
+    USER_KEY,
+    JSON.stringify(currentUser),
+  )
+}
+
 export function setAccessToken(
   newAccessToken: string,
 ): void {

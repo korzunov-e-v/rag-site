@@ -23,9 +23,15 @@ class DocumentResponsePre(Model):
 
 class DocumentResponse(Model):
     id: int
+    owner_id: int
     filename: str
-    content_type: str
+    content_type: str | None
     size: int
     status: str
     created_at: datetime
     description: str | None
+    is_shared: bool
+
+
+class DocumentUpdate(BaseModel):
+    is_shared: bool

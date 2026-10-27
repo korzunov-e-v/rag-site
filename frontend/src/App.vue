@@ -7,6 +7,7 @@ import {
   clearAuth,
   getToken,
   isAuthenticated,
+  setUser,
 } from './services/auth'
 import {
   connectSocket,
@@ -28,7 +29,8 @@ async function initializeAuth() {
   }
 
   try {
-    await getMe()
+    // Роль могла измениться с момента входа.
+    setUser(await getMe())
 
     authenticated.value = true
     connectSocket()

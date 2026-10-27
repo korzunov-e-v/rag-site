@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, String, func, Text
+from sqlalchemy import Boolean, DateTime, String, false, func, Text
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import ForeignKey
@@ -38,6 +38,13 @@ class Document(Base):
     owner_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
+    )
+    # Общий документ видят и используют в поиске все пользователи.
+    is_shared: Mapped[bool] = mapped_column(
+        Boolean,
+        server_default=false(),
+        default=False,
     )
 
     owner: Mapped["User"] = relationship(

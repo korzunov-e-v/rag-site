@@ -4,6 +4,7 @@ import jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.db.connect import get_db
+from backend.app.db.enums import UserRole
 from backend.app.db.models import User
 from backend.app.settings import settings
 
@@ -55,3 +56,15 @@ async def get_current_user(
         )
 
     return user
+
+
+async def require_admin(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Требуются права администратора",
+        )
+
+    return current_user

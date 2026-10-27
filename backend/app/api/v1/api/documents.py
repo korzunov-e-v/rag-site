@@ -2,12 +2,12 @@ from typing import Annotated
 
 from fastapi import Depends, HTTPException, status, UploadFile
 from fastapi.concurrency import run_in_threadpool
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.app.api.dependencies import get_current_user
+from backend.app.api.dependencies import get_current_user, require_admin
 from backend.app.api.v1.router import v1_router
-from backend.app.api.v1.schemas import DocumentFromUrl, DocumentResponse
+from backend.app.api.v1.schemas import DocumentFromUrl, DocumentResponse, DocumentUpdate
 from backend.app.db.connect import get_db
 from backend.app.db.models import User
 from backend.app.db.models.document import Document
@@ -18,7 +18,11 @@ from backend.app.services.fetch_url import fetch_url
 from backend.app.services.save import save_document, store_document
 
 
-async def get_user_document(
+def visible_to(user: User):
+    return or_(Document.owner_id == user.id, Document.is_shared)
+
+
+async def get_visible_document(
     document_id: int,
     db: AsyncSession,
     current_user: User,
@@ -26,13 +30,28 @@ async def get_user_document(
     db_document = await db.scalar(
         select(Document).where(
             Document.id == document_id,
-            Document.owner_id == current_user.id,
+            visible_to(current_user),
         )
     )
     if db_document is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Document(id={document_id}) not found",
+        )
+    return db_document
+
+
+async def get_own_document(
+    document_id: int,
+    db: AsyncSession,
+    current_user: User,
+) -> Document:
+    db_document = await get_visible_document(document_id, db, current_user)
+
+    if db_document.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Изменять документ может только его владелец",
         )
     return db_document
 
@@ -76,7 +95,7 @@ async def get_documents(
 ) -> list[Document]:
     result = await db.scalars(
         select(Document)
-        .where(Document.owner_id == current_user.id)
+        .where(visible_to(current_user))
         .order_by(Document.created_at.desc())
     )
     return list(result)
@@ -88,7 +107,22 @@ async def get_document(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: User = Depends(get_current_user),
 ) -> Document:
-    return await get_user_document(document_id, db, current_user)
+    return await get_visible_document(document_id, db, current_user)
+
+
+@v1_router.patch("/documents/{document_id}", response_model=DocumentResponse)
+async def update_document(
+    document_id: int,
+    data: DocumentUpdate,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: User = Depends(require_admin),
+) -> Document:
+    db_document = await get_own_document(document_id, db, current_user)
+
+    db_document.is_shared = data.is_shared
+    await db.commit()
+
+    return db_document
 
 
 @v1_router.delete(
@@ -100,7 +134,7 @@ async def delete_document(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: User = Depends(get_current_user),
 ) -> None:
-    db_document = await get_user_document(document_id, db, current_user)
+    db_document = await get_own_document(document_id, db, current_user)
 
     if db_document.storage_key:
         await run_in_threadpool(s3_storage.delete, db_document.storage_key)
