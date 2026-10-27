@@ -9,7 +9,9 @@ import {
 import type { Document } from '../types/document'
 import {
   useDocumentStatus,
+  useDocumentUpdated,
   type DocumentStatusEvent,
+  type DocumentUpdatedEvent,
 } from '../composables/useDocumentStatus'
 
 const documents = ref<Document[]>([])
@@ -135,6 +137,17 @@ function handleDocumentStatus(event: DocumentStatusEvent) {
 }
 useDocumentStatus(handleDocumentStatus)
 
+function handleDocumentUpdated(event: DocumentUpdatedEvent) {
+  const document = documents.value.find(
+    (item) => item.id === event.document_id,
+  )
+
+  if (document) {
+    document.description = event.description
+  }
+}
+useDocumentUpdated(handleDocumentUpdated)
+
 onMounted(loadDocuments)
 </script>
 
@@ -236,6 +249,14 @@ onMounted(loadDocuments)
               {{ formatSize(document.size) }}
               ·
               {{ statusLabel(document.status) }}
+            </p>
+
+            <p
+              v-if="document.description"
+              class="mt-1 line-clamp-2 text-xs leading-5 text-slate-500"
+              :title="document.description"
+            >
+              {{ document.description }}
             </p>
           </div>
 

@@ -32,3 +32,18 @@ def emit_document_status(
         },
         room=user_room(owner_id),
     )
+
+
+def emit_document_description(
+    document_id: int,
+    description: str,
+    owner_id: int,
+) -> None:
+    manager.emit(
+        "document:updated",
+        {
+            "document_id": document_id,
+            "description": description,
+        },
+        room=user_room(owner_id),
+    )

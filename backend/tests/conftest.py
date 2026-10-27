@@ -151,6 +151,19 @@ def queued(monkeypatch):
     return document_ids
 
 
+@pytest.fixture(autouse=True)
+def summarize_queued(monkeypatch):
+    # Без подмены задачи ушли бы в настоящий RabbitMQ к рабочему воркеру.
+    document_ids = []
+
+    monkeypatch.setattr(
+        "backend.app.tasks.documents.summarize.delay",
+        document_ids.append,
+    )
+
+    return document_ids
+
+
 @pytest.fixture
 async def client():
     transport = ASGITransport(app=fastapi_app)
