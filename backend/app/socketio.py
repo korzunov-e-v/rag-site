@@ -5,6 +5,7 @@ from backend.app.db.models import User
 from backend.app.db.connect import SessionLocal
 from backend.app.settings import settings
 from backend.app.services.ask import ask_documents
+from backend.app.socketio_publisher import user_room
 
 connected_users: dict[str, int] = {}
 
@@ -17,26 +18,6 @@ sio = socketio.AsyncServer(
     cors_allowed_origins="*",
     client_manager=manager,
 )
-
-
-async def emit_document_status(
-    document_id: int,
-    status: str,
-) -> None:
-    print(
-        f"SOCKET.IO EMIT: "
-        f"document:status "
-        f"id={document_id} "
-        f"status={status}"
-    )
-
-    await sio.emit(
-        "document:status",
-        {
-            "document_id": document_id,
-            "status": status,
-        },
-    )
 
 
 @sio.event
@@ -162,6 +143,7 @@ async def connect(sid, environ, auth):
             return False
 
         connected_users[sid] = user.id
+        await sio.enter_room(sid, user_room(user.id))
 
         print(
             f"SOCKET.IO AUTH: "

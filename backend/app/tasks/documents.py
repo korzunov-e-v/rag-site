@@ -22,7 +22,7 @@ def set_status(
     document.error_message = error_message
     db.commit()
 
-    emit_document_status(document.id, status.value)
+    emit_document_status(document.id, status.value, document.owner_id)
 
 
 @celery_app.task(
